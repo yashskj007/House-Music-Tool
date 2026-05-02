@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibe Check — House Music DNA</title>
+    <title>Vibe Check â€” House Music DNA</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -55,7 +55,7 @@
             display: flex; flex-direction: column; gap: 20px;
         }
 
-        /* ── Header ── */
+        /* â”€â”€ Header â”€â”€ */
         header { text-align: center; margin-bottom: 24px; }
 
         .logo {
@@ -91,7 +91,7 @@
 
         .subtitle { color: var(--muted); font-size: 14.5px; letter-spacing: 0.4px; }
 
-        /* ── Shared card ── */
+        /* â”€â”€ Shared card â”€â”€ */
         .card {
             background: var(--card);
             border: 1px solid var(--border);
@@ -107,7 +107,7 @@
             -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
         }
 
-        /* ── Form fields ── */
+        /* â”€â”€ Form fields â”€â”€ */
         .field { margin-bottom: 22px; }
 
         label {
@@ -161,7 +161,7 @@
             margin: 28px 0;
         }
 
-        /* ── Primary button ── */
+        /* â”€â”€ Primary button â”€â”€ */
         .btn-primary {
             width: 100%; padding: 18px;
             background: linear-gradient(135deg, var(--purple) 0%, #5B21B6 50%, var(--teal-dark) 100%);
@@ -196,7 +196,7 @@
             display: flex; align-items: center; justify-content: center; gap: 12px;
         }
 
-        /* ── Waveform ── */
+        /* â”€â”€ Waveform â”€â”€ */
         .waveform { display: flex; align-items: center; gap: 3px; height: 18px; }
 
         .wb {
@@ -218,7 +218,7 @@
             50%       { transform: scaleY(1);    opacity: 1;    }
         }
 
-        /* ── Spinner ── */
+        /* â”€â”€ Spinner â”€â”€ */
         .spinner {
             width: 18px; height: 18px;
             border: 2px solid rgba(255,255,255,0.25);
@@ -228,7 +228,7 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── Animations ── */
+        /* â”€â”€ Animations â”€â”€ */
         .fade-up {
             animation: fadeUp 0.55s cubic-bezier(0.16,1,0.3,1) both;
         }
@@ -238,7 +238,7 @@
             to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* ── Vibe results ── */
+        /* â”€â”€ Vibe results â”€â”€ */
         .vibe-name {
             font-family: 'Space Grotesk', sans-serif;
             font-size: clamp(26px, 5.5vw, 40px); font-weight: 800;
@@ -316,14 +316,14 @@
             color: rgba(232,232,240,0.78); font-style: italic;
         }
 
-        /* ── Error ── */
+        /* â”€â”€ Error â”€â”€ */
         .error {
             background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.22);
             border-radius: 14px; padding: 16px 18px; color: #FCA5A5;
             font-size: 13.5px; margin-top: 18px; line-height: 1.55;
         }
 
-        /* ── Preferences card ── */
+        /* â”€â”€ Preferences card â”€â”€ */
         .prefs-header {
             text-align: center; margin-bottom: 32px;
         }
@@ -418,7 +418,7 @@
 
         .find-wrap.show { max-height: 90px; opacity: 1; }
 
-        /* ── Song recommendation cards ── */
+        /* â”€â”€ Song recommendation cards â”€â”€ */
         .songs-header {
             text-align: center; margin-bottom: 28px;
         }
@@ -508,25 +508,25 @@
 
     <header>
         <div class="logo">
-            <div class="logo-icon">🎛️</div>
+            <div class="logo-icon">ðŸŽ›ï¸</div>
             <span class="logo-wordmark">Vibe Check</span>
         </div>
         <h1>House Music<br>DNA Analyser</h1>
         <p class="subtitle">Drop 5 tracks &mdash; we'll decode your sonic identity.</p>
     </header>
 
-    <!-- ── Step 1: Input card ── -->
+    <!-- â”€â”€ Step 1: Input card â”€â”€ -->
     <div class="card">
         <div class="field">
             <label>
                 <span class="dot"></span>
                 Anthropic API Key
-                <span class="save-badge" id="saveBadge">✓ Saved</span>
+                <span class="save-badge" id="saveBadge">âœ“ Saved</span>
             </label>
-            <input type="password" id="apiKey" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false">
+            <input type="password" id="apiKey" placeholder="sk-ant-api03-â€¦" autocomplete="off" spellcheck="false">
             <div class="hint">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.45"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg>
-                Stored only in your browser's localStorage — never logged or forwarded.
+                Stored only in your browser's localStorage â€” never logged or forwarded.
             </div>
         </div>
 
@@ -537,7 +537,7 @@
             <textarea id="songs" placeholder="Solomun - Welcome To The Wild&#10;Jamie Jones - My Paradise&#10;Fisher - Losing It&#10;Peggy Gou - It Makes You Forget (Itgehane)&#10;Chris Liebing - Stalker"></textarea>
             <div class="hint">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.45"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-                One track per line &nbsp;·&nbsp; Format: <em>Artist&nbsp;-&nbsp;Song Title</em>
+                One track per line &nbsp;Â·&nbsp; Format: <em>Artist&nbsp;-&nbsp;Song Title</em>
             </div>
         </div>
 
@@ -555,62 +555,62 @@
         <div id="resultsArea"></div>
     </div>
 
-    <!-- ── Step 2: Preferences card (injected) ── -->
+    <!-- â”€â”€ Step 2: Preferences card (injected) â”€â”€ -->
     <div id="prefsArea"></div>
 
-    <!-- ── Step 3: Song recommendations (injected) ── -->
+    <!-- â”€â”€ Step 3: Song recommendations (injected) â”€â”€ -->
     <div id="songsArea"></div>
 
 </div>
 
 <script>
-    // ── State ──────────────────────────────────────────────────────
+    // â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let lastVibe = null;
     const prefs  = { mood: null, energy: null, vocals: null, direction: null };
 
     const QUESTIONS = [
         {
-            id: 'mood', label: 'Mood', icon: '🎭',
+            id: 'mood', label: 'Mood', icon: 'ðŸŽ­',
             cols: 2,
             options: [
-                { val: 'Uplifting & euphoric', emoji: '☀️' },
-                { val: 'Deep & introspective', emoji: '🌊' },
-                { val: 'Dark & hypnotic',      emoji: '🌑' },
-                { val: 'Warm & soulful',       emoji: '🔥' },
+                { val: 'Uplifting & euphoric', emoji: 'â˜€ï¸' },
+                { val: 'Deep & introspective', emoji: 'ðŸŒŠ' },
+                { val: 'Dark & hypnotic',      emoji: 'ðŸŒ‘' },
+                { val: 'Warm & soulful',       emoji: 'ðŸ”¥' },
             ]
         },
         {
-            id: 'energy', label: 'Energy', icon: '⚡',
+            id: 'energy', label: 'Energy', icon: 'âš¡',
             cols: 2,
             options: [
-                { val: 'Low & groovy',      emoji: '🌿' },
-                { val: 'Building tension',  emoji: '📈' },
-                { val: 'Full energy',       emoji: '🔊' },
-                { val: 'Peak time anthem',  emoji: '🚀' },
+                { val: 'Low & groovy',      emoji: 'ðŸŒ¿' },
+                { val: 'Building tension',  emoji: 'ðŸ“ˆ' },
+                { val: 'Full energy',       emoji: 'ðŸ”Š' },
+                { val: 'Peak time anthem',  emoji: 'ðŸš€' },
             ]
         },
         {
-            id: 'vocals', label: 'Vocals', icon: '🎤',
+            id: 'vocals', label: 'Vocals', icon: 'ðŸŽ¤',
             cols: 2,
             options: [
-                { val: 'No vocals',         emoji: '🔇' },
-                { val: 'Chopped samples',   emoji: '✂️' },
-                { val: 'Soulful singing',   emoji: '🎵' },
-                { val: 'Spoken word vibes', emoji: '💬' },
+                { val: 'No vocals',         emoji: 'ðŸ”‡' },
+                { val: 'Chopped samples',   emoji: 'âœ‚ï¸' },
+                { val: 'Soulful singing',   emoji: 'ðŸŽµ' },
+                { val: 'Spoken word vibes', emoji: 'ðŸ’¬' },
             ]
         },
         {
-            id: 'direction', label: 'Direction', icon: '🧭',
+            id: 'direction', label: 'Direction', icon: 'ðŸ§­',
             cols: 3,
             options: [
-                { val: 'Stay similar',        emoji: '🔁' },
-                { val: 'Stretch me slightly', emoji: '🌀' },
-                { val: 'Surprise me',         emoji: '🎲' },
+                { val: 'Stay similar',        emoji: 'ðŸ”' },
+                { val: 'Stretch me slightly', emoji: 'ðŸŒ€' },
+                { val: 'Surprise me',         emoji: 'ðŸŽ²' },
             ]
         },
     ];
 
-    // ── Persist API key ────────────────────────────────────────────
+    // â”€â”€ Persist API key â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const apiKeyEl  = document.getElementById('apiKey');
     const saveBadge = document.getElementById('saveBadge');
     const saved = localStorage.getItem('anthropic_api_key');
@@ -623,7 +623,7 @@
         apiKeyEl._t = setTimeout(() => saveBadge.classList.remove('show'), 2200);
     });
 
-    // ── Helpers ────────────────────────────────────────────────────
+    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const waveHtml = `<div class="waveform">${'<div class="wb"></div>'.repeat(7)}</div>`;
 
     function esc(s) {
@@ -650,7 +650,8 @@
                 'Content-Type': 'application/json',
                 'x-api-key': apiKey,
                 'anthropic-version': '2023-06-01',
-                'anthropic-dangerous-allow-browser': 'true'
+                'anthropic-dangerous-allow-browser': 'true',
+                'anthropic-dangerous-direct-browser-access': 'true'
             },
             body: JSON.stringify({
                 model: 'claude-sonnet-4-6',
@@ -676,25 +677,25 @@
         throw new Error('Could not parse response. Please try again.');
     }
 
-    // ── Step 1: Analyse vibe ───────────────────────────────────────
+    // â”€â”€ Step 1: Analyse vibe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     async function analyseVibe() {
         const rawText = document.getElementById('songs').value.trim();
         const btn     = document.getElementById('analyseBtn');
         const results = document.getElementById('resultsArea');
 
         if (!apiKeyEl.value.trim()) {
-            results.innerHTML = '<div class="error">⚠️ Please enter your Anthropic API key above.</div>';
+            results.innerHTML = '<div class="error">âš ï¸ Please enter your Anthropic API key above.</div>';
             return;
         }
 
         const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
         if (!lines.length) {
-            results.innerHTML = '<div class="error">⚠️ Please enter at least one track in the format <em>Artist - Song Title</em>.</div>';
+            results.innerHTML = '<div class="error">âš ï¸ Please enter at least one track in the format <em>Artist - Song Title</em>.</div>';
             return;
         }
 
         btn.disabled = true;
-        document.getElementById('btnInner').innerHTML = '<div class="spinner"></div> Analysing your vibe…';
+        document.getElementById('btnInner').innerHTML = '<div class="spinner"></div> Analysing your vibeâ€¦';
         results.innerHTML = '';
         document.getElementById('prefsArea').innerHTML = '';
         document.getElementById('songsArea').innerHTML = '';
@@ -705,7 +706,7 @@
 
         const system = `You are an expert house music curator, DJ, and cultural analyst with encyclopaedic knowledge of electronic music subgenres, labels, scenes, and culture.`;
 
-        const user = `Analyse these tracks and return ONLY valid JSON — no markdown, no prose outside the JSON.
+        const user = `Analyse these tracks and return ONLY valid JSON â€” no markdown, no prose outside the JSON.
 
 Tracks:
 ${trackList}
@@ -713,17 +714,17 @@ ${trackList}
 Return exactly:
 {
   "vibeName": "Creative evocative name (e.g. 'Afterhours Deep Seeker')",
-  "vibeDescription": "2–3 sentences on their taste, emotions they chase, and what unifies the selections",
+  "vibeDescription": "2â€“3 sentences on their taste, emotions they chase, and what unifies the selections",
   "subgenres": ["subgenre1", "subgenre2", "subgenre3"],
   "energyLevel": "Low | Medium | High | Peak",
-  "bpmRange": "e.g. 122–128 BPM",
+  "bpmRange": "e.g. 122â€“128 BPM",
   "moodTags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
   "recommendations": [
     { "artist": "Name", "reason": "One sentence" },
     { "artist": "Name", "reason": "One sentence" },
     { "artist": "Name", "reason": "One sentence" }
   ],
-  "clubScene": "1–2 evocative sentences on ideal venue, time of night, and dancefloor energy"
+  "clubScene": "1â€“2 evocative sentences on ideal venue, time of night, and dancefloor energy"
 }`;
 
         try {
@@ -733,14 +734,14 @@ Return exactly:
             renderResults(vibe);
             renderPreferences();
         } catch (err) {
-            results.innerHTML = `<div class="error">⚠️ ${esc(err.message)}</div>`;
+            results.innerHTML = `<div class="error">âš ï¸ ${esc(err.message)}</div>`;
         } finally {
             btn.disabled = false;
             document.getElementById('btnInner').innerHTML = `${waveHtml} Analyse My Vibe`;
         }
     }
 
-    // ── Render vibe analysis ───────────────────────────────────────
+    // â”€â”€ Render vibe analysis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function renderResults(v) {
         const eCol = { Low: '#7DD3FC', Medium: '#C77DFF', High: '#00D4BD', Peak: '#F87171' };
         const col  = eCol[v.energyLevel] || 'var(--purple-light)';
@@ -787,7 +788,7 @@ Return exactly:
             </div>`;
     }
 
-    // ── Render preferences section ─────────────────────────────────
+    // â”€â”€ Render preferences section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function renderPreferences() {
         const groupsHtml = QUESTIONS.map(q => {
             const optsHtml = q.options.map(o => `
@@ -797,7 +798,7 @@ Return exactly:
                      onclick="selectPref(this)">
                     <span class="pref-emoji">${o.emoji}</span>
                     <span class="pref-txt">${esc(o.val)}</span>
-                    <span class="pref-check">✓</span>
+                    <span class="pref-check">âœ“</span>
                 </div>`).join('');
 
             return `
@@ -835,7 +836,7 @@ Return exactly:
             </div>`;
     }
 
-    // ── Preference selection ───────────────────────────────────────
+    // â”€â”€ Preference selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function selectPref(el) {
         const cat = el.dataset.cat;
         const val = el.dataset.val;
@@ -860,7 +861,7 @@ Return exactly:
 
         if (label) {
             label.textContent = filled === total
-                ? 'All set — ready to find your tracks!'
+                ? 'All set â€” ready to find your tracks!'
                 : `${filled} of ${total} selected`;
         }
 
@@ -869,7 +870,7 @@ Return exactly:
         }
     }
 
-    // ── Step 2: Find songs ─────────────────────────────────────────
+    // â”€â”€ Step 2: Find songs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     async function findSongs() {
         if (!lastVibe) return;
 
@@ -877,7 +878,7 @@ Return exactly:
         const inner = document.getElementById('findBtnInner');
 
         btn.disabled = true;
-        inner.innerHTML = '<div class="spinner"></div> Finding your tracks…';
+        inner.innerHTML = '<div class="spinner"></div> Finding your tracksâ€¦';
         document.getElementById('songsArea').innerHTML = '';
 
         const system = `You are an expert house music curator with deep knowledge of real, existing tracks across all house subgenres. You only recommend real songs that genuinely exist.`;
@@ -914,7 +915,7 @@ Return ONLY a valid JSON array of exactly 6 objects. Every track must be real an
             renderSongs(songs);
         } catch (err) {
             document.getElementById('songsArea').innerHTML =
-                `<div class="card"><div class="error">⚠️ ${esc(err.message)}</div></div>`;
+                `<div class="card"><div class="error">âš ï¸ ${esc(err.message)}</div></div>`;
         } finally {
             btn.disabled = false;
             inner.innerHTML = `
@@ -923,10 +924,10 @@ Return ONLY a valid JSON array of exactly 6 objects. Every track must be real an
         }
     }
 
-    // ── Render song cards ──────────────────────────────────────────
+    // â”€â”€ Render song cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function renderSongs(songs) {
         const prefs_summary = [prefs.mood, prefs.energy, prefs.vocals, prefs.direction]
-            .filter(Boolean).join(' · ');
+            .filter(Boolean).join(' Â· ');
 
         const cardsHtml = songs.slice(0, 6).map((s, i) => `
             <div class="song-card">
