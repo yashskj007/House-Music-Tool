@@ -1,0 +1,44 @@
+Read CLAUDE.md for full project context. Then make these upgrades to index.html:
+
+UPGRADE 1 — ADD FREE TEXT INPUT BEFORE "FIND MY RESONANCE"
+After the 5 sliders and before the "Find My Resonance" button, add an elegant free text input field styled to match the dark premium UI (#0A0A0F, gold #C9A84C border on focus, white text).
+
+Label: "DESCRIBE YOUR MOMENT"
+Question: "Describe the music you want (mood, artists, activities, anything!)"
+Placeholder: "e.g. something for a late night drive, melancholic but groovy, like early Black Coffee..."
+Style: Full width textarea, 3 rows, thin 1px border in rgba(201,168,76,0.3), gold border on focus, subtle label in uppercase tracking. Optional — if blank the system auto-adjusts weights.
+
+UPGRADE 2 — WEIGHTED RECOMMENDATION ENGINE
+Update the findSongs recommendation prompt to use a 3-source weighted scoring system:
+
+WEIGHT A — 10-Dimension Analysis (40% weight when free text present, 57% when absent)
+Use the full vibe DNA from the analysis: tempo, groove, harmonic palette, textural layers, emotional arc, vocal character, production era, geographic DNA, scene positioning, listener profile, instrumentation profile. Each recommended song must match the dominant dimensions from this analysis.
+
+WEIGHT B — 5 Slider Calibration (30% weight when free text present, 43% when absent)
+Use all 5 normalised slider values:
+- groove_syncopation_preference: how locked vs swung the groove should be
+- timbre_brightness_preference: warm/analog vs clean/digital production
+- harmonic_density_preference: hypnotic/minimal vs melodic/emotional
+- section_contrast_preference: steady groove vs build/breakdown arc
+- novelty_tolerance: trusted artists vs unfamiliar discoveries
+
+WEIGHT C — Free Text Description (30% weight, only when user has typed something. If blank, redistribute: Weight A becomes 57%, Weight B becomes 43%)
+Parse the free text for: mood keywords, artist references, activity context, energy descriptors, scene references. Use these to further filter and rank recommendations.
+
+The recommendation prompt sent to Claude must explicitly state these weights and instruct Claude to:
+1. Score each potential recommendation against all three weights
+2. Pick the 6-8 highest scoring songs
+3. For each recommendation explain which weights drove the match (e.g. "Strong 10D match on Geographic DNA + Slider match on Harmonic Depth + Free text match on 'late night' mood")
+4. Never default to famous names — best sonic fit wins
+5. Use ARTIST_UNIVERSE as base, Last.fm similar artists as signal, web search for freshness
+
+UPGRADE 3 — FIX THE TIMEOUT WITHOUT REMOVING WEB SEARCH
+The findSongs call is timing out. Fix the timeout issue while keeping web search by:
+1. Keep web search tool enabled — it is important for finding current artists
+2. Increase timeout to 180 seconds
+3. Reduce the ARTIST_UNIVERSE constant size — keep artist names only, strip all extra metadata and descriptions to reduce token count significantly
+4. Instruct Claude to do maximum 2 web searches (not 3) to keep response time reasonable
+5. Add a loading state that cycles through these messages every 8 seconds: "Analysing your vibe DNA...", "Searching the music universe...", "Calibrating recommendations...", "Almost there..."
+6. If the request still times out show a helpful message: "Taking longer than expected — the music universe is vast. Please try again."
+
+After all changes, update CLAUDE.md session log and commit and push.

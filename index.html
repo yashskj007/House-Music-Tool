@@ -933,6 +933,20 @@ Return exactly this structure:
                     <div class="prefs-subtitle">Set where you sit on each axis right now.</div>
                 </div>
                 ${slidersHtml}
+                <div class="divider"></div>
+                <div class="field">
+                    <label>
+                        <span class="dot"></span>
+                        Describe Your Moment
+                        <span class="badge-optional">Optional</span>
+                    </label>
+                    <div class="slider-question" style="margin-bottom:10px">&ldquo;Describe the music you want (mood, artists, activities, anything!)&rdquo;</div>
+                    <textarea id="freeText" style="height:88px" placeholder="e.g. something for a late night drive, melancholic but groovy, like early Black Coffee…"></textarea>
+                    <div class="hint">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.45"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg>
+                        Optional — if blank the system auto-adjusts weights between your analysis profile and slider settings.
+                    </div>
+                </div>
                 <button class="btn-primary" id="findBtn" onclick="findSongs()">
                     <div class="btn-inner" id="findBtnInner">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -1207,19 +1221,32 @@ Laurent Garnier
     async function findSongs() {
         if (!lastVibe) return;
 
-        const btn   = document.getElementById('findBtn');
-        const inner = document.getElementById('findBtnInner');
+        const btn         = document.getElementById('findBtn');
+        const inner       = document.getElementById('findBtnInner');
+        const freeText    = (document.getElementById('freeText')?.value || '').trim();
+        const hasFreeText = freeText.length > 0;
         const spinnerHtml = '<div class="spinner"></div>';
 
         btn.disabled = true;
         inner.innerHTML = `${spinnerHtml} Searching…`;
 
-        const setStatus = msg => {
-            document.getElementById('songsArea').innerHTML = `
-                <div class="card"><div class="status-msg">${spinnerHtml} ${esc(msg)}</div></div>`;
-        };
+        // ── Cycling status messages ───────────────────────────────────
+        const statusMsgs = [
+            'Analysing your vibe DNA…',
+            'Searching the music universe…',
+            'Calibrating recommendations…',
+            'Almost there…'
+        ];
+        let msgIdx = 0;
+        const setStatus = msg =>
+            document.getElementById('songsArea').innerHTML =
+                `<div class="card"><div class="status-msg">${spinnerHtml} ${esc(msg)}</div></div>`;
 
-        setStatus('Searching music universe…');
+        setStatus(statusMsgs[0]);
+        const cycleTimer = setInterval(() => {
+            msgIdx = (msgIdx + 1) % statusMsgs.length;
+            setStatus(statusMsgs[msgIdx]);
+        }, 8000);
 
         const norm = v => ((v - 4) / 3).toFixed(2);
 
@@ -1265,22 +1292,50 @@ Laurent Garnier
             })
             .join('\n');
 
-        // ── Shared blocks ─────────────────────────────────────────────
-        const dnaBlock = `Vibe: ${lastVibe.vibeName}
-Subgenres: ${(lastVibe.subgenres||[]).join(', ')}
-Energy: ${lastVibe.energyLevel} · BPM: ${lastVibe.bpmRange}
-Mood: ${(lastVibe.moodTags||[]).join(', ')}
+        // ── Scoring weights ───────────────────────────────────────────
+        const weightsBlock = hasFreeText
+            ? `SCORING WEIGHTS:\n- Weight A — 10-Dimension Analysis: 40%\n- Weight B — Slider Calibration: 30%\n- Weight C — Free Text Description: 30%`
+            : `SCORING WEIGHTS:\n- Weight A — 10-Dimension Analysis: 57%\n- Weight B — Slider Calibration: 43%`;
 
-10-Dimension Profile:
-${dimSummary}
-
-Instrumentation: ${instrSummary || 'not available'}
-
-Preferences (−1 to +1): groove ${norm(sliderPrefs.groove)} · texture ${norm(sliderPrefs.texture)} · harmonic ${norm(sliderPrefs.harmonic)} · structure ${norm(sliderPrefs.structural)} · discovery ${norm(sliderPrefs.discovery)}`;
+        const freeTextBlock = hasFreeText
+            ? `\nWEIGHT C — FREE TEXT (30%):\nParse for mood keywords, artist references, activity context, energy, scene:\n"${freeText}"\n`
+            : '';
 
         const subgenres = `Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, Soulful House, Vocal House, UK Garage, Bassline House, Acid House, Jackin House, Lo-Fi House, Minimal House, Nu-Disco House, French House, Balearic House, Disco House, Latin House, Brazilian House, Detroit House, NYC House, South African House, Gqom-adjacent, Rominimal, Deep Tech`;
 
-        const jsonSchema = `Output ONLY a valid JSON array of exactly 6 objects as the last thing in your response:
+        const system = `You are an expert house music curator. Use weighted scoring across analysis dimensions, slider preferences, and free text context to surface the most sonically precise recommendations. Prioritise sonic fit over fame. Only recommend real, verifiable songs.`;
+
+        const user = `Recommend 6–8 real house music tracks using weighted scoring.
+
+${weightsBlock}
+
+WEIGHT A — 10-DIMENSION ANALYSIS:
+${dimSummary}
+Instrumentation: ${instrSummary || 'not available'}
+
+WEIGHT B — SLIDER CALIBRATION:
+groove ${norm(sliderPrefs.groove)} (locked→swung) · texture ${norm(sliderPrefs.texture)} (warm→clean) · harmonic ${norm(sliderPrefs.harmonic)} (minimal→melodic) · structure ${norm(sliderPrefs.structural)} (steady→build-drop) · discovery ${norm(sliderPrefs.discovery)} (familiar→unfamiliar)
+${freeTextBlock}
+Context: ${lastVibe.vibeName} · Subgenres: ${(lastVibe.subgenres||[]).join(', ')}
+Energy: ${lastVibe.energyLevel} · BPM: ${lastVibe.bpmRange} · Mood: ${(lastVibe.moodTags||[]).join(', ')}
+
+${lfmBlock}ARTIST UNIVERSE (1,771 priority artists):
+${compactArtists}
+
+WEB SEARCH — run exactly 2 searches before finalising:
+- "[primary subgenre from analysis] best tracks Beatport 2025"
+- "${hasFreeText ? '[artist or mood keyword from the free text above]' : '[scene or geographic value from analysis]'} house music Traxsource 2025"
+
+INSTRUCTIONS:
+1. Score each candidate across all active weights
+2. Select the 6–8 highest-scoring songs
+3. For each track, state which weights drove the match
+4. Never default to the 40–50 most famous names — best sonic fit wins
+5. Draw from ARTIST_UNIVERSE, Last.fm similar-artist signals, and web search results
+
+SUBGENRES: ${subgenres}
+
+After web searches, output ONLY a valid JSON array as the very last thing in your response:
 [
   {
     "title": "Exact Song Title",
@@ -1288,81 +1343,40 @@ Preferences (−1 to +1): groove ${norm(sliderPrefs.groove)} · texture ${norm(s
     "subgenre": "specific house subgenre",
     "sceneEra": "one-line scene/era context",
     "instrumentMatch": "comma-separated prominent instruments",
-    "prefMatches": ["Groove Architecture|Production Texture|Harmonic Depth|Structural Payoff|Discovery Mode"],
-    "why": "Two sentences matching DNA profile and preferences.",
+    "weightMatch": "e.g. Weight A: Geographic DNA + Weight B: Harmonic Depth + Weight C: 'late night' mood",
+    "why": "Two sentences: first connects dominant dimension matches, second explains preference and free text fit.",
     "dimensionMatches": ["one or two dimension labels"]
   }
 ]`;
 
-        // ── Stage 1: fast call — no web search (30s) ──────────────────
-        const systemFast = `You are an expert house music curator. Use the curated artist universe and Last.fm signals to find the most sonically precise track recommendations. Prioritise sonic fit over fame. Only recommend real, verifiable songs.`;
-
-        const userFast = `Recommend exactly 6 real house music tracks for this listener.
-
-${dnaBlock}
-
-${lfmBlock}ARTIST UNIVERSE (1,771 priority artists):
-${compactArtists}
-
-SELECTION RULE: Pick the 6 best sonic matches. Include mid-tier and underground artists — avoid defaulting to only the top 40–50 most famous names.
-
-SUBGENRES: ${subgenres}
-
-${jsonSchema}`;
-
-        // ── Stage 2: web search fallback (180s) ───────────────────────
         const WEB_SEARCH_TOOL = [{ type: 'web_search_20250305', name: 'web_search' }];
 
-        const systemWeb = `You are an expert house music curator. Blend a curated artist universe, Last.fm signals, and live web search to find the most sonically precise track recommendations. Prioritise sonic fit over fame. Only recommend real, verifiable songs.`;
-
-        const userWeb = `Recommend exactly 6 real house music tracks for this listener. Use web search to surface tracks beyond your training data.
-
-${dnaBlock}
-
-${lfmBlock}ARTIST UNIVERSE:
-${ARTIST_UNIVERSE}
-
-WEB SEARCH — run 2–3 searches before deciding:
-- "[primary subgenre] new releases Beatport 2025"
-- "[scene/geographic profile value] house music Traxsource 2025"
-- "underground [subgenre] house emerging artists 2024 2025"
-
-SELECTION RULE: Pick the 6 best sonic matches regardless of source. Include mid-tier and underground artists — avoid defaulting to only the top 40–50 most famous names.
-
-SUBGENRES: ${subgenres}
-
-After web searches, ${jsonSchema}`;
-
         try {
-            let songs;
-            try {
-                const raw = await callAPI(systemFast, userFast, 3200, null, 30000);
-                songs = parseJSON(raw);
-            } catch (stageOneErr) {
-                // Hard errors (API key, HTTP) — propagate immediately
-                if (stageOneErr.message.startsWith('Please enter') || stageOneErr.message.startsWith('API error')) {
-                    throw stageOneErr;
-                }
-                // Soft error (timeout, parse failure) — escalate to web search
-                setStatus('Expanding with live web search…');
-                const raw = await callAPI(systemWeb, userWeb, 4000, WEB_SEARCH_TOOL, 180000);
-                songs = parseJSON(raw);
-            }
+            const raw   = await callAPI(system, user, 4000, WEB_SEARCH_TOOL, 180000);
+            const songs = parseJSON(raw);
             if (!Array.isArray(songs)) throw new Error('Unexpected response format — please try again.');
-            renderSongs(songs);
+            renderSongs(songs, hasFreeText ? freeText : null);
         } catch (err) {
-            document.getElementById('songsArea').innerHTML = `<div class="card"><div class="error">${esc(err.message)}</div></div>`;
+            const msg = err.message.includes('timed out')
+                ? 'Taking longer than expected — the music universe is vast. Please try again.'
+                : err.message;
+            document.getElementById('songsArea').innerHTML =
+                `<div class="card"><div class="error">${esc(msg)}</div></div>`;
         } finally {
+            clearInterval(cycleTimer);
             btn.disabled = false;
             inner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Find My Resonance`;
         }
     }
 
     // ── Render songs ──────────────────────────────────────────────
-    function renderSongs(songs) {
+    function renderSongs(songs, freeText) {
         const sliderSummary = `Groove ${sliderPrefs.groove} · Texture ${sliderPrefs.texture} · Harmonic ${sliderPrefs.harmonic} · Structure ${sliderPrefs.structural} · Discovery ${sliderPrefs.discovery}`;
+        const subtitle = freeText
+            ? `Weighted match — <strong style="color:var(--accent)">&ldquo;${esc(freeText.slice(0,60))}${freeText.length > 60 ? '…' : ''}&rdquo;</strong>`
+            : `Matched to &nbsp;<strong style="color:var(--accent)">${esc(sliderSummary)}</strong>`;
 
-        const cardsHtml = songs.slice(0, 6).map((s, i) => {
+        const cardsHtml = songs.slice(0, 8).map((s, i) => {
             const prefTagsHtml = (s.prefMatches || [])
                 .map(p => `<span class="pref-match-tag">${esc(p)}</span>`).join('');
 
@@ -1378,7 +1392,11 @@ After web searches, ${jsonSchema}`;
                     <span class="song-meta-label">Instruments</span>
                     <span>${esc(s.instrumentMatch)}</span>
                 </div>` : ''}
-                ${prefTagsHtml ? `
+                ${s.weightMatch ? `
+                <div class="song-meta-row" style="margin-bottom:10px">
+                    <span class="song-meta-label">Match</span>
+                    <span style="font-size:11.5px;color:var(--muted);font-style:italic;line-height:1.55">${esc(s.weightMatch)}</span>
+                </div>` : prefTagsHtml ? `
                 <div class="song-meta-row" style="margin-bottom:12px">
                     <span class="song-meta-label">Pref Match</span>
                     <div class="pref-matches">${prefTagsHtml}</div>
@@ -1401,7 +1419,7 @@ After web searches, ${jsonSchema}`;
             <div class="card">
                 <div class="songs-header">
                     <div class="songs-title">Curated Playlist</div>
-                    <div class="songs-subtitle">6 tracks matched to &nbsp;<strong style="color:var(--accent)">${esc(sliderSummary)}</strong></div>
+                    <div class="songs-subtitle">${subtitle}</div>
                 </div>
                 <div class="song-cards">${cardsHtml}</div>
             </div>`;
