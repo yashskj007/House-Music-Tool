@@ -65,18 +65,35 @@
 
 ---
 
-## What Is NOT Yet Built (remaining work)
-- [ ] Instrument analysis dimension (Prompt 2)
-- [ ] 5 slider preference questions replacing old 4 button questions (Prompt 2)
-- [ ] Full House subgenre taxonomy in recommendation prompt (Prompt 3)
-- [ ] Full artist universe from CSV embedded in prompt (Prompt 3)
+## Artist Universe (fully built)
+All three prompt upgrades are complete. The recommendation prompt draws from a structured artist universe of **1,771 priority artists** (seed_priority 1 or 2) extracted from `context/house_artist_roster_v3_merged_longtail.csv` (3,037 total artists).
+
+The priority universe is pre-processed into `context/artist-reference.md` and embedded directly in the `ARTIST_UNIVERSE` JS constant in `index.html`. Buckets:
+
+| Bucket | Artists |
+|--------|---------|
+| Priority Must-Include | 6 |
+| Current Chart Leaders | 117 |
+| Afro / Organic / Global House | 279 |
+| Tech House / Minimal / Deep Tech | 385 |
+| Melodic / Progressive House | 324 |
+| Classic / Deep / Soulful House | 237 |
+| Classic / Ibiza / European House & Tech | 71 |
+| Disco / Nu-Disco / Balearic House | 122 |
+| UK Garage / Bassline / UK House | 117 |
+| Latin / Brazilian / Iberian House | 88 |
+| South African House / Afro Tech / Amapiano | 24 |
+| Lo-Fi / Leftfield / Underground House | 1 |
+
+To regenerate `artist-reference.md` after CSV changes, run the extraction script in the session log.
 
 ---
 
 ## Context Files (in /context folder)
-- `context/artists.csv` — 3,037 House artists with subgenre buckets and scene depth scores
-- `context/schema.docx` — Full music feature analysis framework
-- `context/questions.docx` — 5 preference question designs with model feed instructions
+- `context/house_artist_roster_v3_merged_longtail.csv` — 3,037 House artists with subgenre buckets and seed_priority scores (1–5)
+- `context/artist-reference.md` — **Pre-processed reference**: priority 1+2 artists grouped by bucket. Used as the `ARTIST_UNIVERSE` constant in `index.html`.
+- `context/Questions for the House music listeners.docx` — 5 preference question designs with model feed instructions
+- `context/Vibe Code Recommender Schema for Music Preference.docx` — Full music feature analysis framework
 
 ---
 
@@ -97,5 +114,6 @@ Site updates at live URL within 60 seconds.
 | Day 1 | Initial HTML app built — song input, API call, basic analysis |
 | Day 2 | Last.fm integration + 10-dimension analysis + Vibe DNA summary |
 | Day 3 | Premium UI redesign — dark #0A0A0F, gold #C9A84C, consulting aesthetic |
-| Next | Prompt 2: instruments + 5 sliders |
-| Next | Prompt 3: full subgenre taxonomy + full artist universe |
+| Day 4 | Prompt 2: 12-instrument profile table + 5 calibrated sliders (1–7) |
+| Day 5 | Prompt 3: 44-subgenre taxonomy + tiered artist universe + enhanced song cards |
+| Day 6 | CSV extraction: 1,771 priority artists → artist-reference.md → ARTIST_UNIVERSE constant in index.html |
