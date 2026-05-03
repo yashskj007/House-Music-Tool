@@ -3,24 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vibe Check — House Music DNA</title>
+    <title>House Music Resonance Engine</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --purple:       #9B5DE5;
-            --purple-light: #C77DFF;
-            --purple-dark:  #6B21A8;
-            --teal:         #00D4BD;
-            --teal-light:   #67E8F9;
-            --teal-dark:    #0E9F8E;
-            --bg:           #06060F;
-            --card:         rgba(255,255,255,0.025);
-            --border:       rgba(255,255,255,0.07);
-            --text:         #E8E8F0;
-            --muted:        rgba(232,232,240,0.45);
+            --bg:     #0A0A0F;
+            --card:   #0F0F16;
+            --border: rgba(201,168,76,0.15);
+            --accent: #C9A84C;
+            --text:   #FFFFFF;
+            --muted:  rgba(255,255,255,0.45);
         }
 
         body {
@@ -29,34 +24,34 @@
             font-family: 'Inter', sans-serif;
             min-height: 100vh;
             overflow-x: hidden;
+            line-height: 1.6;
         }
 
-        body::before {
-            content: '';
-            position: fixed; inset: 0;
-            background:
-                radial-gradient(ellipse 70% 55% at 15% 10%,  rgba(155,93,229,0.13) 0%, transparent 65%),
-                radial-gradient(ellipse 55% 45% at 85% 85%,  rgba(0,212,189,0.09)  0%, transparent 65%),
-                radial-gradient(ellipse 40% 30% at 60% 50%,  rgba(103,232,249,0.04) 0%, transparent 60%);
-            pointer-events: none; z-index: 0;
+        /* ── Site header bar ── */
+        .site-header {
+            position: sticky; top: 0; z-index: 100;
+            background: var(--bg);
+            border-bottom: 1px solid var(--accent);
+            padding: 13px 32px;
+            display: flex; align-items: center;
         }
 
-        body::after {
-            content: '';
-            position: fixed; inset: 0;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-            pointer-events: none; z-index: 0; opacity: 0.4;
+        .site-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.22em; text-transform: uppercase;
+            color: var(--accent);
         }
 
+        /* ── Container ── */
         .container {
-            position: relative; z-index: 1;
             max-width: 660px; margin: 0 auto;
-            padding: 52px 24px 80px;
+            padding: 48px 24px 80px;
             display: flex; flex-direction: column; gap: 20px;
         }
 
-        /* ── Header ── */
-        header { text-align: center; margin-bottom: 24px; }
+        /* ── Page header ── */
+        .page-header { text-align: center; margin-bottom: 24px; }
 
         .logo {
             display: inline-flex; align-items: center; gap: 10px;
@@ -64,47 +59,38 @@
         }
 
         .logo-icon {
-            width: 42px; height: 42px;
-            background: linear-gradient(135deg, var(--purple), var(--teal-dark));
-            border-radius: 12px;
+            width: 36px; height: 36px;
+            border: 1px solid var(--accent);
             display: flex; align-items: center; justify-content: center;
-            font-size: 20px;
-            box-shadow: 0 4px 20px rgba(155,93,229,0.35);
+            color: var(--accent);
         }
 
         .logo-wordmark {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 13px; font-weight: 700;
-            letter-spacing: 4px; text-transform: uppercase;
-            background: linear-gradient(135deg, var(--purple-light), var(--teal-light));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.2em; text-transform: uppercase;
+            color: var(--accent);
         }
 
         h1 {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(34px, 7vw, 54px);
-            font-weight: 800; line-height: 1.08; letter-spacing: -2.5px;
-            background: linear-gradient(145deg, #fff 20%, rgba(199,125,255,0.9) 55%, rgba(103,232,249,0.85) 90%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            font-size: clamp(28px, 6vw, 44px);
+            font-weight: 800; line-height: 1.1; letter-spacing: -1.5px;
+            color: var(--text);
             margin-bottom: 14px;
         }
 
-        .subtitle { color: var(--muted); font-size: 14.5px; letter-spacing: 0.4px; }
+        .subtitle {
+            color: var(--muted);
+            font-size: 14px; letter-spacing: 0.3px;
+            line-height: 1.7;
+        }
 
         /* ── Shared card ── */
         .card {
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 28px; padding: 36px;
-            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-            position: relative; overflow: hidden;
-        }
-
-        .card::before {
-            content: ''; position: absolute; inset: 0; border-radius: 28px; padding: 1px;
-            background: linear-gradient(140deg, rgba(155,93,229,0.4) 0%, transparent 40%, transparent 60%, rgba(0,212,189,0.25) 100%);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+            border-radius: 2px; padding: 36px;
         }
 
         /* ── Form fields ── */
@@ -112,106 +98,77 @@
 
         label {
             display: flex; align-items: center; gap: 8px;
-            font-size: 11px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 2px;
+            font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.15em;
             color: var(--muted); margin-bottom: 10px;
         }
 
-        .dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: linear-gradient(135deg, var(--purple), var(--teal));
-            flex-shrink: 0;
-        }
+        .dot { width: 4px; height: 4px; background: var(--accent); flex-shrink: 0; }
 
         .save-badge {
             margin-left: auto; font-size: 10px; font-weight: 600;
-            color: var(--teal); letter-spacing: 0.5px;
+            color: var(--accent); letter-spacing: 0.08em;
             opacity: 0; transition: opacity 0.3s; text-transform: none;
         }
         .save-badge.show { opacity: 1; }
 
         .badge-optional {
             margin-left: auto; font-size: 9px; font-weight: 600;
-            padding: 2px 7px; border-radius: 6px;
-            background: rgba(0,212,189,0.1); border: 1px solid rgba(0,212,189,0.2);
-            color: var(--teal); letter-spacing: 0.5px; text-transform: uppercase;
+            padding: 2px 7px;
+            border: 1px solid rgba(201,168,76,0.3);
+            color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
         }
 
         input[type="password"], textarea {
             width: 100%;
-            background: rgba(255,255,255,0.035);
-            border: 1px solid var(--border); border-radius: 14px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 2px;
             color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px;
-            outline: none; transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+            outline: none; transition: border-color 0.15s, background 0.15s;
         }
 
         input[type="password"] { padding: 14px 18px; letter-spacing: 4px; }
-
         textarea { padding: 18px 20px; resize: none; line-height: 1.85; height: 178px; }
 
         input[type="password"]:focus, textarea:focus {
-            border-color: rgba(155,93,229,0.55);
-            background: rgba(155,93,229,0.04);
-            box-shadow: 0 0 0 4px rgba(155,93,229,0.09), 0 0 24px rgba(155,93,229,0.06);
+            border-color: rgba(201,168,76,0.5);
+            background: rgba(201,168,76,0.02);
         }
 
-        ::placeholder { color: rgba(232,232,240,0.18); }
+        ::placeholder { color: rgba(255,255,255,0.15); }
 
         .hint {
-            display: flex; align-items: center; gap: 6px;
-            margin-top: 8px; font-size: 11px; color: var(--muted);
+            display: flex; align-items: flex-start; gap: 6px;
+            margin-top: 8px; font-size: 11px; color: var(--muted); line-height: 1.6;
         }
+        .hint svg { flex-shrink: 0; margin-top: 2px; }
 
-        .divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--border) 25%, var(--border) 75%, transparent);
-            margin: 28px 0;
-        }
+        .divider { height: 1px; background: rgba(201,168,76,0.12); margin: 28px 0; }
 
         /* ── Primary button ── */
         .btn-primary {
-            width: 100%; padding: 18px;
-            background: linear-gradient(135deg, var(--purple) 0%, #5B21B6 50%, var(--teal-dark) 100%);
-            border: none; border-radius: 16px; color: #fff;
+            width: 100%; padding: 16px;
+            background: transparent;
+            border: 1px solid var(--accent); border-radius: 2px;
+            color: var(--accent);
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 15px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-            cursor: pointer; position: relative; overflow: hidden;
-            transition: transform 0.25s, box-shadow 0.25s, opacity 0.2s;
+            font-size: 12px; font-weight: 700;
+            letter-spacing: 0.15em; text-transform: uppercase;
+            cursor: pointer; transition: background 0.15s;
         }
+        .btn-primary:hover  { background: rgba(201,168,76,0.07); }
+        .btn-primary:active { background: rgba(201,168,76,0.14); }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
-        .btn-primary::after {
-            content: ''; position: absolute; inset: 0;
-            background: linear-gradient(135deg, rgba(199,125,255,0.4), rgba(103,232,249,0.2));
-            opacity: 0; transition: opacity 0.25s;
-        }
-
-        .btn-primary:hover::after { opacity: 1; }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(155,93,229,0.45), 0 4px 15px rgba(0,212,189,0.2);
-        }
-
-        .btn-primary:active { transform: translateY(0); }
-
-        .btn-primary:disabled {
-            opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none;
-        }
-
-        .btn-inner {
-            position: relative; z-index: 1;
-            display: flex; align-items: center; justify-content: center; gap: 12px;
-        }
+        .btn-inner { display: flex; align-items: center; justify-content: center; gap: 12px; }
 
         /* ── Waveform ── */
-        .waveform { display: flex; align-items: center; gap: 3px; height: 18px; }
+        .waveform { display: flex; align-items: center; gap: 3px; height: 16px; }
 
         .wb {
-            width: 3px;
-            background: linear-gradient(to top, var(--purple-light), var(--teal-light));
-            border-radius: 3px; animation: wave 1.1s ease-in-out infinite;
+            width: 2px; background: var(--accent);
+            border-radius: 1px; animation: wave 1.1s ease-in-out infinite;
         }
-
         .wb:nth-child(1) { height: 35%; animation-delay: 0.00s; }
         .wb:nth-child(2) { height: 65%; animation-delay: 0.10s; }
         .wb:nth-child(3) { height: 100%; animation-delay: 0.20s; }
@@ -221,427 +178,325 @@
         .wb:nth-child(7) { height: 70%; animation-delay: 0.00s; }
 
         @keyframes wave {
-            0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
+            0%, 100% { transform: scaleY(0.35); opacity: 0.45; }
             50%       { transform: scaleY(1);    opacity: 1;    }
         }
 
         /* ── Spinner ── */
         .spinner {
-            width: 18px; height: 18px;
-            border: 2px solid rgba(255,255,255,0.25);
-            border-top-color: #fff;
+            width: 15px; height: 15px;
+            border: 1.5px solid rgba(201,168,76,0.3);
+            border-top-color: var(--accent);
             border-radius: 50%; animation: spin 0.75s linear infinite; flex-shrink: 0;
         }
-
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ── Animations ── */
-        .fade-up {
-            animation: fadeUp 0.55s cubic-bezier(0.16,1,0.3,1) both;
-        }
-
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(22px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ── Vibe results ── */
-        .vibe-name {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(26px, 5.5vw, 40px); font-weight: 800;
-            letter-spacing: -1.5px; line-height: 1.15;
-            background: linear-gradient(135deg, var(--purple-light), var(--teal-light));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            margin-bottom: 18px;
-        }
-
-        .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-
-        .tag {
-            padding: 5px 13px; border-radius: 100px;
-            font-size: 11.5px; font-weight: 600; letter-spacing: 0.3px;
-        }
-
-        .tag-p {
-            background: rgba(155,93,229,0.13); border: 1px solid rgba(155,93,229,0.28);
-            color: var(--purple-light);
-        }
-
-        .tag-t {
-            background: rgba(0,212,189,0.1); border: 1px solid rgba(0,212,189,0.22);
-            color: var(--teal-light);
-        }
-
-        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 26px; }
-
-        .stat {
-            background: rgba(255,255,255,0.025); border: 1px solid var(--border);
-            border-radius: 18px; padding: 18px 14px; text-align: center;
-        }
-
-        .stat-lbl {
-            font-size: 9.5px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 1.8px; color: var(--muted); margin-bottom: 8px;
-        }
-
-        .stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; line-height: 1.25; }
-
-        .vibe-desc { font-size: 14.5px; line-height: 1.75; color: rgba(232,232,240,0.72); margin-bottom: 26px; }
-
-        .section-lbl {
-            font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 2.5px; color: var(--purple-light); margin-bottom: 12px;
-        }
-
-        .recs { display: flex; flex-direction: column; gap: 10px; margin-bottom: 26px; }
-
-        .rec {
-            display: flex; align-items: center; gap: 14px;
-            padding: 13px 16px;
-            background: rgba(255,255,255,0.025); border: 1px solid var(--border);
-            border-radius: 14px; transition: background 0.2s, border-color 0.2s;
-        }
-
-        .rec:hover { background: rgba(155,93,229,0.07); border-color: rgba(155,93,229,0.2); }
-
-        .rec-num {
-            width: 30px; height: 30px;
-            background: linear-gradient(135deg, var(--purple), var(--teal-dark));
-            border-radius: 9px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 12px; font-weight: 800; flex-shrink: 0;
-            font-family: 'Space Grotesk', sans-serif;
-        }
-
-        .rec-artist { font-size: 14px; font-weight: 600; }
-        .rec-reason { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-        .scene-card {
-            background: linear-gradient(135deg, rgba(155,93,229,0.07), rgba(0,212,189,0.04));
-            border: 1px solid rgba(155,93,229,0.18); border-radius: 18px;
-            padding: 20px 22px; font-size: 14px; line-height: 1.7;
-            color: rgba(232,232,240,0.78); font-style: italic;
-        }
 
         /* ── Error ── */
         .error {
-            background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.22);
-            border-radius: 14px; padding: 16px 18px; color: #FCA5A5;
-            font-size: 13.5px; margin-top: 18px; line-height: 1.55;
+            background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 2px; padding: 16px 18px; color: #FCA5A5;
+            font-size: 13px; margin-top: 18px; line-height: 1.6;
         }
 
-        /* ── Preferences card ── */
-        .prefs-header {
-            text-align: center; margin-bottom: 32px;
+        /* ── Results ── */
+        .vibe-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(22px, 5vw, 34px); font-weight: 800;
+            letter-spacing: -1px; line-height: 1.15;
+            color: var(--text); margin-bottom: 18px;
         }
+
+        .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 24px; }
+
+        .tag {
+            padding: 4px 11px;
+            font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+            border: 1px solid rgba(201,168,76,0.25);
+            color: var(--accent); text-transform: uppercase;
+        }
+
+        .stats {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 1px; margin-bottom: 26px;
+            background: rgba(201,168,76,0.1);
+            border: 1px solid rgba(201,168,76,0.12);
+        }
+        .stat { background: var(--card); padding: 16px 14px; text-align: center; }
+
+        .stat-lbl {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.15em; color: var(--muted); margin-bottom: 8px;
+        }
+        .stat-val {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 16px; font-weight: 700; line-height: 1.25;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .section-lbl {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.15em; color: var(--muted); margin-bottom: 12px;
+        }
+
+        .recs {
+            display: flex; flex-direction: column;
+            border: 1px solid rgba(201,168,76,0.12);
+            margin-bottom: 26px;
+        }
+        .rec {
+            display: flex; align-items: flex-start; gap: 16px;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(201,168,76,0.08);
+            transition: background 0.15s;
+        }
+        .rec:last-child { border-bottom: none; }
+        .rec:hover { background: rgba(201,168,76,0.03); }
+
+        .rec-num {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 11px; font-weight: 700; color: var(--accent);
+            min-width: 20px; flex-shrink: 0; padding-top: 1px;
+            font-variant-numeric: tabular-nums;
+        }
+        .rec-artist { font-size: 14px; font-weight: 600; }
+        .rec-reason { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.55; }
+
+        .scene-card {
+            border: 1px solid rgba(201,168,76,0.15);
+            border-left: 2px solid var(--accent);
+            padding: 16px 18px; font-size: 14px; line-height: 1.75;
+            color: rgba(255,255,255,0.65); font-style: italic;
+        }
+
+        /* ── DNA Summary ── */
+        .dna-summary-card {
+            border: 1px solid rgba(201,168,76,0.2);
+            border-left: 2px solid var(--accent);
+            padding: 20px 22px; margin-bottom: 28px;
+        }
+        .dna-summary-label {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.15em; color: var(--accent); margin-bottom: 12px;
+        }
+        .dna-summary-text { font-size: 14px; line-height: 1.8; color: rgba(255,255,255,0.78); }
+
+        /* ── 10-Dimension Scorecard ── */
+        .dimensions-header {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.15em; color: var(--muted);
+            display: flex; align-items: center; gap: 8px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(201,168,76,0.12);
+        }
+
+        .scorecard { display: flex; flex-direction: column; margin-bottom: 6px; }
+
+        .scorecard-row {
+            display: grid;
+            grid-template-columns: 18px 130px 1fr;
+            grid-template-areas:
+                "icon label value"
+                "icon .     detail";
+            column-gap: 14px;
+            row-gap: 3px;
+            padding: 13px 0;
+            border-bottom: 1px solid rgba(201,168,76,0.07);
+            align-items: center;
+        }
+        .scorecard-row:last-child { border-bottom: none; }
+
+        .row-icon {
+            grid-area: icon; color: var(--accent);
+            display: flex; align-items: flex-start; justify-content: center;
+            padding-top: 1px;
+        }
+        .row-label {
+            grid-area: label;
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.13em; color: var(--muted); line-height: 1.3;
+        }
+        .row-value {
+            grid-area: value;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px; font-weight: 600; color: var(--text);
+            font-variant-numeric: tabular-nums; line-height: 1.3;
+        }
+        .row-detail {
+            grid-area: detail;
+            font-size: 11.5px; line-height: 1.6; color: var(--muted);
+        }
+
+        /* ── Preferences ── */
+        .prefs-header { margin-bottom: 30px; }
 
         .prefs-title {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
-            margin-bottom: 6px;
+            font-size: 18px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px;
         }
-
-        .prefs-subtitle { font-size: 13.5px; color: var(--muted); }
+        .prefs-subtitle { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
         .pref-group { margin-bottom: 24px; }
 
         .pref-q {
             display: flex; align-items: center; gap: 8px;
-            font-size: 11px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 2px; color: var(--muted); margin-bottom: 12px;
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.15em; color: var(--muted); margin-bottom: 10px;
         }
+        .pref-q-icon { color: var(--accent); display: flex; align-items: center; flex-shrink: 0; }
 
-        .pref-q-icon { font-size: 14px; }
-
-        .pref-options {
-            display: grid; gap: 10px;
-            grid-template-columns: repeat(2, 1fr);
-        }
-
+        .pref-options { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
         .pref-options.cols-3 { grid-template-columns: repeat(3, 1fr); }
 
         .pref-card {
-            padding: 13px 14px;
-            background: rgba(255,255,255,0.025); border: 1px solid var(--border);
-            border-radius: 14px; cursor: pointer;
-            display: flex; align-items: center; gap: 10px;
-            transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+            padding: 11px 13px;
+            background: transparent; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 2px; cursor: pointer;
+            display: flex; align-items: center; gap: 9px;
+            transition: border-color 0.15s, background 0.15s;
             user-select: none; -webkit-tap-highlight-color: transparent;
         }
+        .pref-card:hover    { border-color: rgba(201,168,76,0.35); background: rgba(201,168,76,0.03); }
+        .pref-card.selected { border-color: var(--accent); background: rgba(201,168,76,0.06); }
 
-        .pref-card:hover {
-            background: rgba(155,93,229,0.07); border-color: rgba(155,93,229,0.28);
-            transform: translateY(-1px);
-        }
-
-        .pref-card.selected {
-            background: rgba(155,93,229,0.12);
-            border-color: rgba(155,93,229,0.5);
-            box-shadow: 0 0 0 1px rgba(155,93,229,0.15), 0 4px 18px rgba(155,93,229,0.12);
-        }
-
-        .pref-emoji { font-size: 18px; flex-shrink: 0; line-height: 1; }
-
-        .pref-txt { font-size: 13px; font-weight: 500; line-height: 1.3; flex: 1; }
+        .pref-emoji { color: var(--accent); display: flex; align-items: center; flex-shrink: 0; }
+        .pref-txt   { font-size: 12.5px; font-weight: 500; line-height: 1.3; flex: 1; }
 
         .pref-check {
-            width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
-            background: linear-gradient(135deg, var(--purple), var(--teal-dark));
+            width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+            border: 1px solid rgba(201,168,76,0.4);
             display: flex; align-items: center; justify-content: center;
-            font-size: 9px; color: #fff; font-weight: 900;
-            opacity: 0; transform: scale(0);
-            transition: opacity 0.2s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+            color: var(--accent); opacity: 0; transition: opacity 0.15s;
         }
-
-        .pref-card.selected .pref-check { opacity: 1; transform: scale(1); }
+        .pref-card.selected .pref-check { opacity: 1; }
 
         .pref-progress {
-            display: flex; align-items: center; justify-content: center; gap: 8px;
+            display: flex; align-items: center; gap: 6px;
             margin-bottom: 18px; min-height: 22px;
         }
-
         .prog-dot {
-            width: 8px; height: 8px; border-radius: 50%;
-            background: var(--border); transition: background 0.3s, transform 0.3s;
+            width: 6px; height: 6px;
+            border: 1px solid rgba(201,168,76,0.3);
+            transition: background 0.2s, border-color 0.2s;
         }
-
-        .prog-dot.active {
-            background: linear-gradient(135deg, var(--purple), var(--teal));
-            transform: scale(1.2);
-        }
+        .prog-dot.active { background: var(--accent); border-color: var(--accent); }
 
         .prog-label {
-            font-size: 11px; color: var(--muted); letter-spacing: 0.5px;
-            margin-left: 4px;
+            font-size: 10px; color: var(--muted); letter-spacing: 0.08em;
+            text-transform: uppercase; margin-left: 6px;
         }
 
         .find-wrap {
             overflow: hidden; max-height: 0; opacity: 0;
-            transition: max-height 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease;
-            margin-top: 0;
+            transition: max-height 0.4s ease, opacity 0.3s ease;
         }
+        .find-wrap.show { max-height: 70px; opacity: 1; }
 
-        .find-wrap.show { max-height: 90px; opacity: 1; }
-
-        /* ── Vibe DNA Summary ── */
-        .dna-summary-card {
-            background: linear-gradient(135deg, rgba(155,93,229,0.1), rgba(0,212,189,0.06));
-            border: 1px solid rgba(155,93,229,0.3);
-            border-radius: 20px; padding: 24px 26px; margin-bottom: 28px;
-            position: relative; overflow: hidden;
-        }
-
-        .dna-summary-card::before {
-            content: '';
-            position: absolute; top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(199,125,255,0.6), rgba(103,232,249,0.4), transparent);
-        }
-
-        .dna-summary-label {
-            display: flex; align-items: center; gap: 8px;
-            font-size: 10px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 2.5px; color: var(--purple-light); margin-bottom: 12px;
-        }
-
-        .dna-summary-label svg { flex-shrink: 0; }
-
-        .dna-summary-text {
-            font-size: 14.5px; line-height: 1.75;
-            color: rgba(232,232,240,0.85);
-            font-style: italic;
-        }
-
-        /* ── 10 Dimensions Grid ── */
-        .dimensions-header {
-            font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 2.5px; color: var(--teal-light); margin-bottom: 14px;
-            display: flex; align-items: center; gap: 8px;
-        }
-
-        .dna-grid {
-            display: grid; grid-template-columns: repeat(2, 1fr);
-            gap: 10px; margin-bottom: 6px;
-        }
-
-        .dna-card {
-            background: rgba(255,255,255,0.025); border: 1px solid var(--border);
-            border-radius: 16px; padding: 16px 16px 14px;
-            transition: background 0.2s, border-color 0.2s;
-            animation: fadeUp 0.45s cubic-bezier(0.16,1,0.3,1) both;
-        }
-
-        .dna-card:hover { background: rgba(155,93,229,0.05); border-color: rgba(155,93,229,0.2); }
-
-        .dna-card:nth-child(1)  { animation-delay: 0.03s; }
-        .dna-card:nth-child(2)  { animation-delay: 0.06s; }
-        .dna-card:nth-child(3)  { animation-delay: 0.09s; }
-        .dna-card:nth-child(4)  { animation-delay: 0.12s; }
-        .dna-card:nth-child(5)  { animation-delay: 0.15s; }
-        .dna-card:nth-child(6)  { animation-delay: 0.18s; }
-        .dna-card:nth-child(7)  { animation-delay: 0.21s; }
-        .dna-card:nth-child(8)  { animation-delay: 0.24s; }
-        .dna-card:nth-child(9)  { animation-delay: 0.27s; }
-        .dna-card:nth-child(10) { animation-delay: 0.30s; }
-
-        .dna-card-top {
-            display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
-        }
-
-        .dna-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
-
-        .dna-label {
-            font-size: 9px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 1.8px; color: var(--muted); line-height: 1.2;
-        }
-
-        .dna-value {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 13px; font-weight: 700; line-height: 1.3;
-            background: linear-gradient(135deg, var(--purple-light), var(--teal-light));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            margin-bottom: 5px;
-        }
-
-        .dna-detail {
-            font-size: 11.5px; line-height: 1.55; color: rgba(232,232,240,0.5);
-        }
-
-        /* ── Song recommendation cards ── */
-        .songs-header {
-            text-align: center; margin-bottom: 28px;
-        }
+        /* ── Song cards ── */
+        .songs-header { margin-bottom: 24px; }
 
         .songs-title {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
-            background: linear-gradient(135deg, var(--purple-light), var(--teal-light));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-            margin-bottom: 6px;
+            font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
+            color: var(--text); margin-bottom: 6px;
         }
+        .songs-subtitle { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
-        .songs-subtitle { font-size: 13.5px; color: var(--muted); }
-
-        .song-cards { display: flex; flex-direction: column; gap: 14px; }
+        .song-cards { display: flex; flex-direction: column; gap: 10px; }
 
         .song-card {
-            background: rgba(255,255,255,0.025); border: 1px solid var(--border);
-            border-radius: 20px; padding: 22px 22px 18px 26px;
-            position: relative; overflow: hidden;
-            transition: background 0.2s, border-color 0.2s;
-            animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+            border: 1px solid rgba(201,168,76,0.1);
+            border-left: 2px solid var(--accent);
+            padding: 18px 18px 14px 20px;
+            transition: background 0.15s, border-color 0.15s;
         }
-
-        .song-card:nth-child(1) { animation-delay: 0.04s; }
-        .song-card:nth-child(2) { animation-delay: 0.09s; }
-        .song-card:nth-child(3) { animation-delay: 0.14s; }
-        .song-card:nth-child(4) { animation-delay: 0.19s; }
-        .song-card:nth-child(5) { animation-delay: 0.24s; }
-        .song-card:nth-child(6) { animation-delay: 0.29s; }
-
-        .song-card::before {
-            content: ''; position: absolute;
-            left: 0; top: 0; bottom: 0; width: 3px;
-            background: linear-gradient(to bottom, var(--purple), var(--teal));
-        }
-
-        .song-card:hover { background: rgba(155,93,229,0.05); border-color: rgba(155,93,229,0.2); }
+        .song-card:hover { background: rgba(201,168,76,0.02); border-color: rgba(201,168,76,0.22); }
 
         .song-num {
-            font-size: 10px; font-weight: 700; letter-spacing: 2px;
+            font-size: 9px; font-weight: 700; letter-spacing: 0.15em;
             text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+            font-variant-numeric: tabular-nums;
         }
-
         .song-title {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 19px; font-weight: 700; letter-spacing: -0.5px;
-            line-height: 1.2; margin-bottom: 4px;
+            font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
+            line-height: 1.2; margin-bottom: 4px; color: var(--text);
         }
-
-        .song-artist { font-size: 13px; color: var(--teal); font-weight: 600; margin-bottom: 12px; }
-
+        .song-artist {
+            font-size: 11px; color: var(--accent); font-weight: 600;
+            margin-bottom: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+        }
         .song-why {
-            font-size: 13.5px; line-height: 1.65;
-            color: rgba(232,232,240,0.65); margin-bottom: 14px;
+            font-size: 13px; line-height: 1.75;
+            color: rgba(255,255,255,0.58); margin-bottom: 12px;
         }
 
-        /* ── Dimension match tags on song cards ── */
         .dim-matches {
-            display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+            display: flex; flex-wrap: wrap;
+            margin-bottom: 12px; font-size: 10.5px; color: var(--muted);
         }
+        .dim-match-tag + .dim-match-tag::before { content: ' · '; color: rgba(201,168,76,0.35); }
 
-        .dim-match-tag {
-            padding: 3px 10px; border-radius: 100px;
-            font-size: 10.5px; font-weight: 600; letter-spacing: 0.2px;
-            background: rgba(155,93,229,0.1); border: 1px solid rgba(155,93,229,0.22);
-            color: var(--purple-light);
-        }
-
-        .dim-match-tag:nth-child(even) {
-            background: rgba(0,212,189,0.08); border-color: rgba(0,212,189,0.2);
-            color: var(--teal-light);
-        }
-
-        .song-links { display: flex; gap: 10px; flex-wrap: wrap; }
+        .song-links { display: flex; gap: 8px; flex-wrap: wrap; }
 
         .link-btn {
-            display: inline-flex; align-items: center; gap: 7px;
-            padding: 8px 14px; border-radius: 10px;
-            font-size: 12px; font-weight: 600;
-            text-decoration: none;
-            transition: background 0.2s, border-color 0.2s, transform 0.2s;
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 5px 11px; border-radius: 2px;
+            font-size: 11px; font-weight: 600; text-decoration: none;
+            letter-spacing: 0.05em; transition: background 0.15s;
         }
+        .link-yt { background: transparent; border: 1px solid rgba(255,80,80,0.22); color: #FF8080; }
+        .link-yt:hover { background: rgba(255,80,80,0.06); }
+        .link-sp { background: transparent; border: 1px solid rgba(30,215,96,0.2); color: #1ED760; }
+        .link-sp:hover { background: rgba(30,215,96,0.06); }
 
-        .link-btn:hover { transform: translateY(-1px); }
-
-        .link-yt {
-            background: rgba(255,60,60,0.1); border: 1px solid rgba(255,60,60,0.22);
-            color: #FF8080;
-        }
-
-        .link-yt:hover { background: rgba(255,60,60,0.18); border-color: rgba(255,60,60,0.38); }
-
-        .link-sp {
-            background: rgba(30,215,96,0.08); border: 1px solid rgba(30,215,96,0.2);
-            color: #1ED760;
-        }
-
-        .link-sp:hover { background: rgba(30,215,96,0.16); border-color: rgba(30,215,96,0.35); }
-
-        /* ── Lastfm note ── */
+        /* ── Last.fm note ── */
         .lfm-note {
             display: inline-flex; align-items: center; gap: 5px;
-            font-size: 10px; color: var(--muted); margin-top: 6px;
+            font-size: 10px; color: var(--muted); margin-top: 8px;
         }
 
         @media (max-width: 480px) {
-            .dna-grid { grid-template-columns: 1fr; }
-            .stats { grid-template-columns: repeat(3, 1fr); }
+            .scorecard-row { grid-template-columns: 18px 90px 1fr; }
+            .site-header { padding: 12px 16px; }
+            .card { padding: 24px 20px; }
         }
     </style>
 </head>
 <body>
+
+<header class="site-header">
+    <span class="site-title">House Music Resonance Engine</span>
+</header>
+
 <div class="container">
 
-    <header>
+    <div class="page-header">
         <div class="logo">
-            <div class="logo-icon">🎛️</div>
-            <span class="logo-wordmark">Vibe Check</span>
+            <div class="logo-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                    <line x1="2" y1="13" x2="2" y2="7"/>
+                    <line x1="5.5" y1="13" x2="5.5" y2="3"/>
+                    <line x1="9" y1="13" x2="9" y2="8"/>
+                    <line x1="12.5" y1="13" x2="12.5" y2="5"/>
+                </svg>
+            </div>
+            <span class="logo-wordmark">Resonance Engine</span>
         </div>
-        <h1>House Music<br>DNA Analyser</h1>
+        <h1>House Music<br>Resonance Engine</h1>
         <p class="subtitle">Drop 5 tracks &mdash; we'll decode your sonic identity across 10 dimensions.</p>
-    </header>
+    </div>
 
-    <!-- ── Step 1: Input card ── -->
     <div class="card">
         <div class="field">
             <label>
                 <span class="dot"></span>
                 Anthropic API Key
-                <span class="save-badge" id="saveBadge">✓ Saved</span>
+                <span class="save-badge" id="saveBadge">Saved</span>
             </label>
             <input type="password" id="apiKey" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false">
             <div class="hint">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.45"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.45"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg>
                 Stored only in your browser's localStorage — never logged or forwarded.
             </div>
         </div>
@@ -654,7 +509,7 @@
             </label>
             <input type="password" id="lastfmKey" placeholder="Your Last.fm API key…" autocomplete="off" spellcheck="false">
             <div class="hint">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.45"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.45"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg>
                 Free at last.fm/api &nbsp;·&nbsp; Powers real listener counts &amp; Cultural/Scene dimensions.
             </div>
         </div>
@@ -665,7 +520,7 @@
             <label><span class="dot"></span>Your 5 House Tracks</label>
             <textarea id="songs" placeholder="Solomun - Welcome To The Wild&#10;Jamie Jones - My Paradise&#10;Fisher - Losing It&#10;Peggy Gou - It Makes You Forget (Itgehane)&#10;Chris Liebing - Stalker"></textarea>
             <div class="hint">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.45"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.45"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                 One track per line &nbsp;·&nbsp; Format: <em>Artist&nbsp;-&nbsp;Song Title</em>
             </div>
         </div>
@@ -684,13 +539,8 @@
         <div id="resultsArea"></div>
     </div>
 
-    <!-- ── Step 1.5: Vibe DNA breakdown (injected) ── -->
     <div id="dnaArea"></div>
-
-    <!-- ── Step 2: Preferences card (injected) ── -->
     <div id="prefsArea"></div>
-
-    <!-- ── Step 3: Song recommendations (injected) ── -->
     <div id="songsArea"></div>
 
 </div>
@@ -700,70 +550,106 @@
     let lastVibe = null;
     const prefs  = { mood: null, energy: null, vocals: null, direction: null };
 
+    // ── SVG icon maps ──────────────────────────────────────────────
+    const DIM_ICONS = {
+        tempo:      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10.5,8"/></svg>`,
+        harmonic:   `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 8C2.5 5 4.5 5 6 8S9.5 11 11 8 13.5 5 15 8"/></svg>`,
+        texture:    `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 5Q8 2 14 5"/><path d="M2 8Q8 5 14 8"/><path d="M2 11Q8 8 14 11"/></svg>`,
+        emotional:  `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><polygon points="8,2 14,8 8,14 2,8"/></svg>`,
+        vocal:      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="2" width="5" height="7" rx="2.5"/><path d="M3 9.5a5 5 0 0 0 10 0"/><line x1="8" y1="14.5" x2="8" y2="16"/><line x1="5" y1="16" x2="11" y2="16"/></svg>`,
+        production: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="14" x2="3" y2="6"/><line x1="8" y1="14" x2="8" y2="2"/><line x1="13" y1="14" x2="13" y2="8"/></svg>`,
+        geographic: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6"/><line x1="2" y1="8" x2="14" y2="8"/><path d="M5.5 2.5Q8 6 8 8T5.5 13.5"/><path d="M10.5 2.5Q8 6 8 8t2.5 5"/></svg>`,
+        scene:      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="8,2 15,14 1,14"/></svg>`,
+        listener:   `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="5.5" cy="5" r="2.5"/><circle cx="10.5" cy="5" r="2.5"/><path d="M1 14c0-2.5 2-4 4.5-4"/><path d="M15 14c0-2.5-2-4-4.5-4"/><path d="M5.5 10Q8 8.5 10.5 10"/></svg>`,
+        dancefloor: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="14" x2="8" y2="2"/><polyline points="4,6 8,2 12,6"/></svg>`,
+    };
+
+    const Q_ICONS = {
+        mood:      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><polygon points="8,2 14,8 8,14 2,8"/></svg>`,
+        energy:    `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,2 5,9 9,9 7,14"/></svg>`,
+        vocals:    `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="2" width="5" height="7" rx="2.5"/><path d="M3 9.5a5 5 0 0 0 10 0"/><line x1="8" y1="14.5" x2="8" y2="16"/></svg>`,
+        direction: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><polyline points="6,6 8,4 10,6"/><line x1="8" y1="4" x2="8" y2="12"/></svg>`,
+    };
+
+    const OPT_ICONS = {
+        'Uplifting & euphoric': `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/><line x1="3.1" y1="3.1" x2="4.5" y2="4.5"/><line x1="11.5" y1="11.5" x2="12.9" y2="12.9"/><line x1="12.9" y1="3.1" x2="11.5" y2="4.5"/><line x1="4.5" y1="11.5" x2="3.1" y2="12.9"/></svg>`,
+        'Deep & introspective': `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 8C2.5 4.5 5 2 8 2s5.5 2.5 6 6"/><path d="M2 8C4 10.5 6 11.5 8 11.5S12 10.5 14 8"/></svg>`,
+        'Dark & hypnotic':      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M11 3A6 6 0 1 0 11 13 4 4 0 1 1 11 3"/></svg>`,
+        'Warm & soulful':       `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5C8 13.5 3 10 3 6.5a3 3 0 0 1 5-2.24A3 3 0 0 1 13 6.5C13 10 8 13.5 8 13.5z"/></svg>`,
+        'Low & groovy':         `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="12" x2="5.5" y2="12"/><line x1="7" y1="12" x2="10" y2="12"/><line x1="11.5" y1="12" x2="14" y2="12"/></svg>`,
+        'Building tension':     `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2.5" y1="14" x2="2.5" y2="10"/><line x1="7" y1="14" x2="7" y2="6"/><line x1="11.5" y1="14" x2="11.5" y2="2"/></svg>`,
+        'Full energy':          `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 8Q3 5 5 8T9 8T13 8T15 8"/></svg>`,
+        'Peak time anthem':     `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="14" x2="8" y2="2"/><polyline points="4,6 8,2 12,6"/><line x1="5" y1="14" x2="11" y2="14"/></svg>`,
+        'No vocals':            `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>`,
+        'Chopped samples':      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="5" x2="14" y2="5"/><line x1="2" y1="9" x2="8" y2="9"/><line x1="10.5" y1="9" x2="14" y2="9"/><line x1="9.25" y1="7" x2="9.25" y2="11"/></svg>`,
+        'Soulful singing':      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="4.5" cy="11.5" r="2"/><line x1="6.5" y1="11.5" x2="6.5" y2="4"/><line x1="6.5" y1="4" x2="11" y2="3"/><line x1="11" y1="3" x2="11" y2="9"/></svg>`,
+        'Spoken word vibes':    `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="7" rx="1.5"/><path d="M5 13v-3"/><path d="M11 13v-3"/><line x1="5" y1="7" x2="11" y2="7"/></svg>`,
+        'Stay similar':         `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h10"/><path d="M3 11h10"/><polyline points="10,3 13,5 10,7"/><polyline points="6,9 3,11 6,13"/></svg>`,
+        'Stretch me slightly':  `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><circle cx="8" cy="8" r="5.5"/></svg>`,
+        'Surprise me':          `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="4" cy="4" r="1.2"/><circle cx="12" cy="4" r="1.2"/><circle cx="4" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="8" cy="8" r="1.2"/></svg>`,
+    };
+
+    // ── Data ──────────────────────────────────────────────────────
     const QUESTIONS = [
         {
-            id: 'mood', label: 'Mood', icon: '🎭',
-            cols: 2,
+            id: 'mood', label: 'Mood', icon: 'mood', cols: 2,
             options: [
-                { val: 'Uplifting & euphoric', emoji: '☀️' },
-                { val: 'Deep & introspective', emoji: '🌊' },
-                { val: 'Dark & hypnotic',      emoji: '🌑' },
-                { val: 'Warm & soulful',       emoji: '🔥' },
+                { val: 'Uplifting & euphoric' },
+                { val: 'Deep & introspective' },
+                { val: 'Dark & hypnotic'      },
+                { val: 'Warm & soulful'       },
             ]
         },
         {
-            id: 'energy', label: 'Energy', icon: '⚡',
-            cols: 2,
+            id: 'energy', label: 'Energy', icon: 'energy', cols: 2,
             options: [
-                { val: 'Low & groovy',      emoji: '🌿' },
-                { val: 'Building tension',  emoji: '📈' },
-                { val: 'Full energy',       emoji: '🔊' },
-                { val: 'Peak time anthem',  emoji: '🚀' },
+                { val: 'Low & groovy'      },
+                { val: 'Building tension'  },
+                { val: 'Full energy'       },
+                { val: 'Peak time anthem'  },
             ]
         },
         {
-            id: 'vocals', label: 'Vocals', icon: '🎤',
-            cols: 2,
+            id: 'vocals', label: 'Vocals', icon: 'vocals', cols: 2,
             options: [
-                { val: 'No vocals',         emoji: '🔇' },
-                { val: 'Chopped samples',   emoji: '✂️' },
-                { val: 'Soulful singing',   emoji: '🎵' },
-                { val: 'Spoken word vibes', emoji: '💬' },
+                { val: 'No vocals'         },
+                { val: 'Chopped samples'   },
+                { val: 'Soulful singing'   },
+                { val: 'Spoken word vibes' },
             ]
         },
         {
-            id: 'direction', label: 'Direction', icon: '🧭',
-            cols: 3,
+            id: 'direction', label: 'Direction', icon: 'direction', cols: 3,
             options: [
-                { val: 'Stay similar',        emoji: '🔁' },
-                { val: 'Stretch me slightly', emoji: '🌀' },
-                { val: 'Surprise me',         emoji: '🎲' },
+                { val: 'Stay similar'        },
+                { val: 'Stretch me slightly' },
+                { val: 'Surprise me'         },
             ]
         },
     ];
 
     const DIMENSION_META = [
-        { id: 'tempo',       icon: '⏱️',  label: 'Tempo & Rhythm DNA'        },
-        { id: 'harmonic',    icon: '🎹',  label: 'Harmonic Palette'           },
-        { id: 'texture',     icon: '🌊',  label: 'Textural Layers'            },
-        { id: 'emotional',   icon: '🎭',  label: 'Emotional Arc'              },
-        { id: 'vocal',       icon: '🎤',  label: 'Vocal Character'            },
-        { id: 'production',  icon: '🔧',  label: 'Production Era & Design'    },
-        { id: 'geographic',  icon: '🌍',  label: 'Geographic & Cultural DNA'  },
-        { id: 'scene',       icon: '🎪',  label: 'Cultural & Scene Position'  },
-        { id: 'listener',    icon: '👥',  label: 'Listener Profile'           },
-        { id: 'dancefloor',  icon: '💃',  label: 'Dancefloor Function'        },
+        { id: 'tempo',       label: 'Tempo & Rhythm DNA'       },
+        { id: 'harmonic',    label: 'Harmonic Palette'          },
+        { id: 'texture',     label: 'Textural Layers'           },
+        { id: 'emotional',   label: 'Emotional Arc'             },
+        { id: 'vocal',       label: 'Vocal Character'           },
+        { id: 'production',  label: 'Production Era & Design'   },
+        { id: 'geographic',  label: 'Geographic & Cultural DNA' },
+        { id: 'scene',       label: 'Cultural & Scene Position' },
+        { id: 'listener',    label: 'Listener Profile'          },
+        { id: 'dancefloor',  label: 'Dancefloor Function'       },
     ];
 
-    // ── Persist API keys ───────────────────────────────────────────
-    const apiKeyEl   = document.getElementById('apiKey');
-    const lastfmEl   = document.getElementById('lastfmKey');
-    const saveBadge  = document.getElementById('saveBadge');
+    // ── Persist API keys ──────────────────────────────────────────
+    const apiKeyEl  = document.getElementById('apiKey');
+    const lastfmEl  = document.getElementById('lastfmKey');
+    const saveBadge = document.getElementById('saveBadge');
 
-    const savedAnth  = localStorage.getItem('anthropic_api_key');
-    const savedLfm   = localStorage.getItem('lastfm_api_key');
-    if (savedAnth) apiKeyEl.value  = savedAnth;
-    if (savedLfm)  lastfmEl.value  = savedLfm;
+    const savedAnth = localStorage.getItem('anthropic_api_key');
+    const savedLfm  = localStorage.getItem('lastfm_api_key');
+    if (savedAnth) apiKeyEl.value = savedAnth;
+    if (savedLfm)  lastfmEl.value = savedLfm;
 
     apiKeyEl.addEventListener('input', () => {
         localStorage.setItem('anthropic_api_key', apiKeyEl.value);
@@ -776,19 +662,19 @@
         localStorage.setItem('lastfm_api_key', lastfmEl.value);
     });
 
-    // ── Helpers ────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────
     const waveHtml = `<div class="waveform">${'<div class="wb"></div>'.repeat(7)}</div>`;
 
     function esc(s) {
         return String(s ?? '')
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     function searchUrl(platform, artist, title) {
         const q = `${artist} ${title}`;
         if (platform === 'yt')
-            return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q).replace(/%20/g, '+');
+            return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q).replace(/%20/g,'+');
         return 'https://open.spotify.com/search/' + encodeURIComponent(q);
     }
 
@@ -829,7 +715,7 @@
         throw new Error('Could not parse response. Please try again.');
     }
 
-    // ── Last.fm data fetch ─────────────────────────────────────────
+    // ── Last.fm ───────────────────────────────────────────────────
     async function fetchLastFmTrack(apiKey, artist, title) {
         try {
             const url = `https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${encodeURIComponent(apiKey)}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&format=json&autocorrect=1`;
@@ -851,18 +737,13 @@
     async function fetchLastFmData(tracks) {
         const lfmKey = lastfmEl.value.trim();
         if (!lfmKey) return null;
-
-        const results = await Promise.all(
-            tracks.map(({ artist, title }) => fetchLastFmTrack(lfmKey, artist, title))
-        );
-        return results;
+        return Promise.all(tracks.map(({ artist, title }) => fetchLastFmTrack(lfmKey, artist, title)));
     }
 
-    // ── Parse "Artist - Title" lines ──────────────────────────────
+    // ── Parse tracks ──────────────────────────────────────────────
     function parseTracks(rawText) {
         return rawText.split('\n')
-            .map(l => l.trim())
-            .filter(Boolean)
+            .map(l => l.trim()).filter(Boolean)
             .map(l => {
                 const idx = l.indexOf(' - ');
                 if (idx === -1) return { artist: l, title: '' };
@@ -870,37 +751,35 @@
             });
     }
 
-    // ── Step 1: Analyse vibe ───────────────────────────────────────
+    // ── Step 1: Analyse ───────────────────────────────────────────
     async function analyseVibe() {
         const rawText = document.getElementById('songs').value.trim();
         const btn     = document.getElementById('analyseBtn');
         const results = document.getElementById('resultsArea');
 
         if (!apiKeyEl.value.trim()) {
-            results.innerHTML = '<div class="error">⚠️ Please enter your Anthropic API key above.</div>';
+            results.innerHTML = '<div class="error">Please enter your Anthropic API key above.</div>';
             return;
         }
 
         const tracks = parseTracks(rawText);
         if (!tracks.length) {
-            results.innerHTML = '<div class="error">⚠️ Please enter at least one track in the format <em>Artist - Song Title</em>.</div>';
+            results.innerHTML = '<div class="error">Please enter at least one track in the format <em>Artist - Song Title</em>.</div>';
             return;
         }
 
         btn.disabled = true;
-        document.getElementById('btnInner').innerHTML = '<div class="spinner"></div> Analysing your vibe…';
+        document.getElementById('btnInner').innerHTML = '<div class="spinner"></div> Analysing…';
         results.innerHTML = '';
-        document.getElementById('dnaArea').innerHTML = '';
+        document.getElementById('dnaArea').innerHTML   = '';
         document.getElementById('prefsArea').innerHTML = '';
         document.getElementById('songsArea').innerHTML = '';
         lastVibe = null;
         Object.keys(prefs).forEach(k => prefs[k] = null);
 
-        // Fetch Last.fm data in parallel with prep
         const lfmData = await fetchLastFmData(tracks);
 
-        const trackList = tracks.map((t, i) =>
-            `${i + 1}. ${t.artist} - ${t.title}`).join('\n');
+        const trackList = tracks.map((t, i) => `${i + 1}. ${t.artist} - ${t.title}`).join('\n');
 
         let lfmContext = '';
         if (lfmData && lfmData.some(Boolean)) {
@@ -921,69 +800,29 @@ ${trackList}${lfmContext}
 Return exactly this structure:
 {
   "vibeName": "Creative evocative name (e.g. 'Afterhours Deep Seeker')",
-  "vibeDNA": "A rich 3–4 sentence paragraph synthesising the listener's overall taste fingerprint across all 5 songs — what unifies their selections emotionally, culturally, sonically, and what that says about who they are as a music lover.",
+  "vibeDNA": "A rich 3-4 sentence paragraph synthesising the listener's overall taste fingerprint across all 5 songs.",
   "dimensions": [
-    {
-      "id": "tempo",
-      "value": "Short punchy value (e.g. '124–128 BPM · deep swing')",
-      "detail": "One sentence elaborating on rhythmic feel, groove philosophy, and how it serves the music."
-    },
-    {
-      "id": "harmonic",
-      "value": "Short punchy value (e.g. 'Minor modes · dark tension')",
-      "detail": "One sentence on key preferences, modal flavour, and harmonic language across the selections."
-    },
-    {
-      "id": "texture",
-      "value": "Short punchy value (e.g. 'Dense layers · analogue warmth')",
-      "detail": "One sentence on layering density, use of space, and overall sound design philosophy."
-    },
-    {
-      "id": "emotional",
-      "value": "Short punchy value (e.g. 'Slow burn → catharsis')",
-      "detail": "One sentence on the emotional journey these tracks take the listener on."
-    },
-    {
-      "id": "vocal",
-      "value": "Short punchy value (e.g. 'Sparse · processed · hypnotic')",
-      "detail": "One sentence on vocal style, processing, and how vocals function across these selections."
-    },
-    {
-      "id": "production",
-      "value": "Short punchy value (e.g. '2010s Berlin · hardware-driven')",
-      "detail": "One sentence on production era, synthesis approach, and sampling culture."
-    },
-    {
-      "id": "geographic",
-      "value": "Short punchy value referencing specific scenes (e.g. 'Berlin / Ibiza hybrid')",
-      "detail": "One sentence on scene origins, club culture ties (African/Chicago/London/Berlin/Ibiza etc.) and production aesthetic (raw/polished/organic/mechanical)."
-    },
-    {
-      "id": "scene",
-      "value": "Short punchy value (e.g. 'Deep underground · Berghain circle')",
-      "detail": "One sentence on underground vs mainstream positioning, club context, and typical artist/collaborator network for these selections."
-    },
-    {
-      "id": "listener",
-      "value": "Short punchy value describing the listener archetype${lfmData && lfmData.some(Boolean) ? ' (use real Last.fm listener counts)' : ''}",
-      "detail": "One sentence describing who typically listens to these tracks — their identity, scene affiliation, and listening habits${lfmData && lfmData.some(Boolean) ? ', backed by the Last.fm data provided' : ''}."
-    },
-    {
-      "id": "dancefloor",
-      "value": "Short punchy value (e.g. '3am peak · intimate rooms')",
-      "detail": "One sentence on when and where these tracks belong — time of night, venue size, floor energy and function."
-    }
+    { "id": "tempo",      "value": "e.g. '124-128 BPM · deep swing'",        "detail": "One sentence on rhythmic feel and groove philosophy." },
+    { "id": "harmonic",   "value": "e.g. 'Minor modes · dark tension'",       "detail": "One sentence on key preferences and harmonic language." },
+    { "id": "texture",    "value": "e.g. 'Dense layers · analogue warmth'",   "detail": "One sentence on layering density and sound design philosophy." },
+    { "id": "emotional",  "value": "e.g. 'Slow burn to catharsis'",           "detail": "One sentence on the emotional journey these tracks create." },
+    { "id": "vocal",      "value": "e.g. 'Sparse · processed · hypnotic'",    "detail": "One sentence on vocal style and processing across these selections." },
+    { "id": "production", "value": "e.g. '2010s Berlin · hardware-driven'",   "detail": "One sentence on production era and synthesis approach." },
+    { "id": "geographic", "value": "e.g. 'Berlin / Ibiza hybrid'",            "detail": "One sentence on scene origins and club culture ties." },
+    { "id": "scene",      "value": "e.g. 'Deep underground · Berghain circle'","detail": "One sentence on underground vs mainstream positioning." },
+    { "id": "listener",   "value": "Listener archetype${lfmData && lfmData.some(Boolean) ? ' (use real Last.fm listener counts)' : ''}",  "detail": "One sentence on who listens to these tracks${lfmData && lfmData.some(Boolean) ? ', using Last.fm data' : ''}." },
+    { "id": "dancefloor", "value": "e.g. '3am peak · intimate rooms'",        "detail": "One sentence on time of night, venue size, floor energy." }
   ],
   "subgenres": ["subgenre1", "subgenre2", "subgenre3"],
   "energyLevel": "Low | Medium | High | Peak",
-  "bpmRange": "e.g. 122–128 BPM",
+  "bpmRange": "e.g. 122-128 BPM",
   "moodTags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
   "recommendations": [
     { "artist": "Name", "reason": "One sentence" },
     { "artist": "Name", "reason": "One sentence" },
     { "artist": "Name", "reason": "One sentence" }
   ],
-  "clubScene": "1–2 evocative sentences on ideal venue, time of night, and dancefloor energy"
+  "clubScene": "1-2 evocative sentences on ideal venue, time of night, and dancefloor energy"
 }`;
 
         try {
@@ -995,23 +834,23 @@ Return exactly this structure:
             renderDimensions(vibe, lfmData);
             renderPreferences();
         } catch (err) {
-            results.innerHTML = `<div class="error">⚠️ ${esc(err.message)}</div>`;
+            results.innerHTML = `<div class="error">${esc(err.message)}</div>`;
         } finally {
             btn.disabled = false;
             document.getElementById('btnInner').innerHTML = `${waveHtml} Analyse My Vibe`;
         }
     }
 
-    // ── Render vibe analysis ───────────────────────────────────────
+    // ── Render results ────────────────────────────────────────────
     function renderResults(v) {
-        const eCol = { Low: '#7DD3FC', Medium: '#C77DFF', High: '#00D4BD', Peak: '#F87171' };
-        const col  = eCol[v.energyLevel] || 'var(--purple-light)';
+        const eCol = { Low: 'var(--muted)', Medium: 'var(--accent)', High: 'var(--text)', Peak: '#F87171' };
+        const col  = eCol[v.energyLevel] || 'var(--text)';
 
-        const moodTags     = (v.moodTags    || []).map((t, i) => `<span class="tag ${i%2?'tag-t':'tag-p'}">${esc(t)}</span>`).join('');
-        const subgenreTags = (v.subgenres   || []).map(s => `<span class="tag tag-p">${esc(s)}</span>`).join('');
+        const moodTags     = (v.moodTags    || []).map(t => `<span class="tag">${esc(t)}</span>`).join('');
+        const subgenreTags = (v.subgenres   || []).map(s => `<span class="tag">${esc(s)}</span>`).join('');
         const recsHtml     = (v.recommendations || []).map((r, i) => `
             <div class="rec">
-                <div class="rec-num">${i+1}</div>
+                <div class="rec-num">${String(i+1).padStart(2,'0')}</div>
                 <div>
                     <div class="rec-artist">${esc(r.artist)}</div>
                     <div class="rec-reason">${esc(r.reason)}</div>
@@ -1019,7 +858,7 @@ Return exactly this structure:
             </div>`).join('');
 
         document.getElementById('resultsArea').innerHTML = `
-            <div class="fade-up">
+            <div>
                 <div class="divider"></div>
                 <div class="vibe-name">${esc(v.vibeName)}</div>
                 <div class="tags">${moodTags}</div>
@@ -1030,7 +869,7 @@ Return exactly this structure:
                     </div>
                     <div class="stat">
                         <div class="stat-lbl">BPM Range</div>
-                        <div class="stat-val" style="font-size:13px;letter-spacing:-0.5px">${esc(v.bpmRange)}</div>
+                        <div class="stat-val" style="font-size:13px">${esc(v.bpmRange)}</div>
                     </div>
                     <div class="stat">
                         <div class="stat-lbl">Subgenres</div>
@@ -1048,22 +887,20 @@ Return exactly this structure:
             </div>`;
     }
 
-    // ── Render 10-dimension DNA breakdown ─────────────────────────
+    // ── Render 10-dimension scorecard ─────────────────────────────
     function renderDimensions(v, lfmData) {
         const dims = v.dimensions || [];
         const dimMap = {};
         dims.forEach(d => { dimMap[d.id] = d; });
 
-        const cardsHtml = DIMENSION_META.map(meta => {
+        const rowsHtml = DIMENSION_META.map(meta => {
             const d = dimMap[meta.id] || { value: '—', detail: '' };
             return `
-            <div class="dna-card">
-                <div class="dna-card-top">
-                    <span class="dna-icon">${meta.icon}</span>
-                    <span class="dna-label">${meta.label}</span>
-                </div>
-                <div class="dna-value">${esc(d.value)}</div>
-                <div class="dna-detail">${esc(d.detail)}</div>
+            <div class="scorecard-row">
+                <span class="row-icon">${DIM_ICONS[meta.id] || ''}</span>
+                <span class="row-label">${meta.label}</span>
+                <span class="row-value">${esc(d.value)}</span>
+                <span class="row-detail">${esc(d.detail)}</span>
             </div>`;
         }).join('');
 
@@ -1072,61 +909,58 @@ Return exactly this structure:
             const totalListeners = lfmData.reduce((sum, d) => sum + (d?.listeners || 0), 0);
             lfmNoteHtml = `
             <div class="lfm-note">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
                 Listener &amp; scene data sourced from Last.fm · ${totalListeners.toLocaleString()} combined listeners across your tracks
             </div>`;
         }
 
         document.getElementById('dnaArea').innerHTML = `
-            <div class="card fade-up">
+            <div class="card">
                 <div class="dna-summary-card">
                     <div class="dna-summary-label">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                        Vibe DNA Summary
+                        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><polygon points="8,2 14,8 8,14 2,8"/></svg>
+                        Resonance Profile
                     </div>
                     <p class="dna-summary-text">${esc(v.vibeDNA || v.vibeDescription || '')}</p>
                 </div>
-
                 <div class="dimensions-header">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.6"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-                    10-Dimension DNA Breakdown
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="14" x2="2" y2="2"/><line x1="6.5" y1="14" x2="6.5" y2="5"/><line x1="11" y1="14" x2="11" y2="8"/></svg>
+                    10-Dimension Analysis
                 </div>
-                <div class="dna-grid">${cardsHtml}</div>
+                <div class="scorecard">${rowsHtml}</div>
                 ${lfmNoteHtml}
             </div>`;
     }
 
-    // ── Render preferences section ─────────────────────────────────
+    // ── Render preferences ────────────────────────────────────────
     function renderPreferences() {
         const groupsHtml = QUESTIONS.map(q => {
             const optsHtml = q.options.map(o => `
-                <div class="pref-card"
-                     data-cat="${q.id}"
-                     data-val="${esc(o.val)}"
-                     onclick="selectPref(this)">
-                    <span class="pref-emoji">${o.emoji}</span>
+                <div class="pref-card" data-cat="${q.id}" data-val="${esc(o.val)}" onclick="selectPref(this)">
+                    <span class="pref-emoji">${OPT_ICONS[o.val] || ''}</span>
                     <span class="pref-txt">${esc(o.val)}</span>
-                    <span class="pref-check">✓</span>
+                    <span class="pref-check">
+                        <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+                    </span>
                 </div>`).join('');
 
             return `
                 <div class="pref-group">
                     <div class="pref-q">
-                        <span class="pref-q-icon">${q.icon}</span>
+                        <span class="pref-q-icon">${Q_ICONS[q.id] || ''}</span>
                         ${q.label}
                     </div>
                     <div class="pref-options${q.cols === 3 ? ' cols-3' : ''}">${optsHtml}</div>
                 </div>`;
         }).join('');
 
-        const dotsHtml = Object.keys(prefs).map(() =>
-            `<div class="prog-dot"></div>`).join('');
+        const dotsHtml = Object.keys(prefs).map(() => `<div class="prog-dot"></div>`).join('');
 
         document.getElementById('prefsArea').innerHTML = `
-            <div class="card fade-up">
+            <div class="card">
                 <div class="prefs-header">
-                    <div class="prefs-title">Refine your vibe</div>
-                    <div class="prefs-subtitle">Tell us how you want to feel right now.</div>
+                    <div class="prefs-title">Refine Your Parameters</div>
+                    <div class="prefs-subtitle">Define how you want to feel right now.</div>
                 </div>
                 ${groupsHtml}
                 <div class="pref-progress" id="progRow">
@@ -1136,24 +970,20 @@ Return exactly this structure:
                 <div class="find-wrap" id="findWrap">
                     <button class="btn-primary" id="findBtn" onclick="findSongs()">
                         <div class="btn-inner" id="findBtnInner">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                            Find My Songs
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            Find My Tracks
                         </div>
                     </button>
                 </div>
             </div>`;
     }
 
-    // ── Preference selection ───────────────────────────────────────
+    // ── Preference selection ──────────────────────────────────────
     function selectPref(el) {
         const cat = el.dataset.cat;
-
-        document.querySelectorAll(`.pref-card[data-cat="${cat}"]`)
-            .forEach(c => c.classList.remove('selected'));
-
+        document.querySelectorAll(`.pref-card[data-cat="${cat}"]`).forEach(c => c.classList.remove('selected'));
         el.classList.add('selected');
         prefs[cat] = el.dataset.val;
-
         updateProgress();
     }
 
@@ -1165,17 +995,11 @@ Return exactly this structure:
         const findWrap = document.getElementById('findWrap');
 
         dots.forEach((d, i) => d.classList.toggle('active', i < filled));
-
-        if (label) {
-            label.textContent = filled === total
-                ? 'All set — ready to find your tracks!'
-                : `${filled} of ${total} selected`;
-        }
-
+        if (label) label.textContent = filled === total ? 'All parameters set' : `${filled} of ${total} selected`;
         if (findWrap) findWrap.classList.toggle('show', filled === total);
     }
 
-    // ── Step 2: Find songs ─────────────────────────────────────────
+    // ── Step 2: Find songs ────────────────────────────────────────
     async function findSongs() {
         if (!lastVibe) return;
 
@@ -1183,11 +1007,10 @@ Return exactly this structure:
         const inner = document.getElementById('findBtnInner');
 
         btn.disabled = true;
-        inner.innerHTML = '<div class="spinner"></div> Finding your tracks…';
+        inner.innerHTML = '<div class="spinner"></div> Sourcing tracks…';
         document.getElementById('songsArea').innerHTML = '';
 
-        const dims = (lastVibe.dimensions || []);
-        const dimSummary = dims.map(d => {
+        const dimSummary = (lastVibe.dimensions || []).map(d => {
             const meta = DIMENSION_META.find(m => m.id === d.id);
             return `${meta ? meta.label : d.id}: ${d.value}`;
         }).join('\n');
@@ -1213,13 +1036,13 @@ Right Now They Want:
 - Direction: ${prefs.direction}
 
 Return ONLY a valid JSON array of exactly 6 objects. Every track must be real and verifiable.
-For dimensionMatches, pick 2–3 of the most relevant dimension labels from this list: ${dimNames.join(', ')}.
+For dimensionMatches, pick 2-3 of the most relevant dimension labels from this list: ${dimNames.join(', ')}.
 
 [
   {
     "title": "Exact Song Title",
     "artist": "Artist Name",
-    "why": "Two sentences: the first connects to specific dimensions of their DNA profile, the second explains how it matches their current mood and energy preferences.",
+    "why": "Two sentences: first connects to specific dimensions of their DNA profile, second explains how it matches their current mood and energy preferences.",
     "dimensionMatches": ["Dimension Label 1", "Dimension Label 2"]
   }
 ]`;
@@ -1230,24 +1053,19 @@ For dimensionMatches, pick 2–3 of the most relevant dimension labels from this
             if (!Array.isArray(songs)) throw new Error('Unexpected response format.');
             renderSongs(songs);
         } catch (err) {
-            document.getElementById('songsArea').innerHTML =
-                `<div class="card"><div class="error">⚠️ ${esc(err.message)}</div></div>`;
+            document.getElementById('songsArea').innerHTML = `<div class="card"><div class="error">${esc(err.message)}</div></div>`;
         } finally {
             btn.disabled = false;
-            inner.innerHTML = `
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                Find My Songs`;
+            inner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Find My Tracks`;
         }
     }
 
-    // ── Render song cards ──────────────────────────────────────────
+    // ── Render songs ──────────────────────────────────────────────
     function renderSongs(songs) {
-        const prefs_summary = [prefs.mood, prefs.energy, prefs.vocals, prefs.direction]
-            .filter(Boolean).join(' · ');
+        const prefs_summary = [prefs.mood, prefs.energy, prefs.vocals, prefs.direction].filter(Boolean).join(' · ');
 
         const cardsHtml = songs.slice(0, 6).map((s, i) => {
-            const dimTagsHtml = (s.dimensionMatches || []).map(d =>
-                `<span class="dim-match-tag">${esc(d)}</span>`).join('');
+            const dimTagsHtml = (s.dimensionMatches || []).map(d => `<span class="dim-match-tag">${esc(d)}</span>`).join('');
 
             return `
             <div class="song-card">
@@ -1257,16 +1075,12 @@ For dimensionMatches, pick 2–3 of the most relevant dimension labels from this
                 <div class="song-why">${esc(s.why)}</div>
                 ${dimTagsHtml ? `<div class="dim-matches">${dimTagsHtml}</div>` : ''}
                 <div class="song-links">
-                    <a class="link-btn link-yt"
-                       href="${searchUrl('yt', s.artist, s.title)}"
-                       target="_blank" rel="noopener">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    <a class="link-btn link-yt" href="${searchUrl('yt', s.artist, s.title)}" target="_blank" rel="noopener">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                         YouTube
                     </a>
-                    <a class="link-btn link-sp"
-                       href="${searchUrl('sp', s.artist, s.title)}"
-                       target="_blank" rel="noopener">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 0 1 .207.857zm1.223-2.722a.779.779 0 0 1-1.071.257c-2.687-1.652-6.785-2.131-9.965-1.166a.779.779 0 0 1-.435-1.493c3.632-1.057 8.147-.546 11.214 1.331a.779.779 0 0 1 .257 1.071zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 1 1-.543-1.79c3.532-1.072 9.404-.865 13.115 1.337a.935.935 0 0 1-.955 1.61z"/></svg>
+                    <a class="link-btn link-sp" href="${searchUrl('sp', s.artist, s.title)}" target="_blank" rel="noopener">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 0 1 .207.857zm1.223-2.722a.779.779 0 0 1-1.071.257c-2.687-1.652-6.785-2.131-9.965-1.166a.779.779 0 0 1-.435-1.493c3.632-1.057 8.147-.546 11.214 1.331a.779.779 0 0 1 .257 1.071zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 1 1-.543-1.79c3.532-1.072 9.404-.865 13.115 1.337a.935.935 0 0 1-.955 1.61z"/></svg>
                         Spotify
                     </a>
                 </div>
@@ -1274,10 +1088,10 @@ For dimensionMatches, pick 2–3 of the most relevant dimension labels from this
         }).join('');
 
         document.getElementById('songsArea').innerHTML = `
-            <div class="card fade-up">
+            <div class="card">
                 <div class="songs-header">
-                    <div class="songs-title">Your Personalised Playlist</div>
-                    <div class="songs-subtitle">6 tracks curated for &nbsp;<strong style="color:var(--purple-light)">${esc(prefs_summary)}</strong></div>
+                    <div class="songs-title">Curated Playlist</div>
+                    <div class="songs-subtitle">6 tracks sourced for &nbsp;<strong style="color:var(--accent)">${esc(prefs_summary)}</strong></div>
                 </div>
                 <div class="song-cards">${cardsHtml}</div>
             </div>`;

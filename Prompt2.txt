@@ -1,0 +1,12 @@
+Replace the current 4 preference questions with these 5 new ones, displayed as elegant 1-7 slider scales (not buttons). Each slider goes from left pole to right pole with a label on each end and the current value shown. The questions are:
+
+Groove Architecture — Left: "Locked / driving / precise" → Right: "Swung / syncopated / percussive"
+Production Texture — Left: "Warm / raw / organic / analog" → Right: "Clean / bright / polished / surgical"
+Harmonic Depth — Left: "Hypnotic / minimal / repetitive" → Right: "Melodic / harmonic / emotionally lifted"
+Structural Payoff — Left: "Steady groove throughout" → Right: "Strong build / breakdown / release arc"
+Discovery Mode — Left: "Trusted artist / label / scene" → Right: "Unfamiliar but sonically right"
+Give some explanation (one-liner) on what the above mean
+
+
+Also add instrument analysis to the Claude prompt. When analysing each song, Claude must also identify and rate the prominence (Low/Medium/High) of these instruments: Kick drum, Hi-hats/cymbals, Bassline, Synthesizer pads, Piano/Keys, Percussion (congas/bongos/shakers), Strings, Vocals, Guitar, Trumpet/brass. Show this as a clean instrument prominence table in the analysis output.
+Pass all 5 slider values (normalised as -1 to +1) to the recommendation Claude prompt so recommendations account for groove, texture, harmony, structure and discovery preferences.
