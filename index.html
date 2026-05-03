@@ -146,6 +146,12 @@
             font-size: 13px; margin-top: 18px; line-height: 1.6;
         }
 
+        /* ── Status / loading message ── */
+        .status-msg {
+            display: flex; align-items: center; justify-content: center; gap: 14px;
+            padding: 32px 20px; color: var(--muted); font-size: 13px; letter-spacing: 0.04em;
+        }
+
         /* ── Results ── */
         .vibe-name {
             font-family: 'Space Grotesk', sans-serif;
@@ -1195,8 +1201,7 @@ Young Stunna
 LO-FI / LEFTFIELD / UNDERGROUND HOUSE:
 Laurent Garnier
 
----
-Always consider Priority Must-Include artists first as candidates for every recommendation set.`;
+`;
 
     // ── Step 2: Find songs ────────────────────────────────────────
     async function findSongs() {
@@ -1204,10 +1209,17 @@ Always consider Priority Must-Include artists first as candidates for every reco
 
         const btn   = document.getElementById('findBtn');
         const inner = document.getElementById('findBtnInner');
+        const spinnerHtml = '<div class="spinner"></div>';
 
         btn.disabled = true;
-        inner.innerHTML = '<div class="spinner"></div> Sourcing tracks…';
-        document.getElementById('songsArea').innerHTML = '';
+        inner.innerHTML = `${spinnerHtml} Searching…`;
+
+        const setStatus = msg => {
+            document.getElementById('songsArea').innerHTML = `
+                <div class="card"><div class="status-msg">${spinnerHtml} ${esc(msg)}</div></div>`;
+        };
+
+        setStatus('Searching music universe…');
 
         const norm = v => ((v - 4) / 3).toFixed(2);
 
@@ -1221,13 +1233,13 @@ Always consider Priority Must-Include artists first as candidates for every reco
             .map(i => `${i.name}: ${i.prominence}`)
             .join(', ');
 
-        // ── Build Last.fm context (source 2) ─────────────────────────
+        // ── Last.fm context ───────────────────────────────────────────
         const lfmRec = [];
         const _lfmData    = lastVibe._lfmData    || [];
         const _lfmSimilar = lastVibe._lfmSimilar || [];
 
         if (_lfmData.some(Boolean)) {
-            lfmRec.push('SOURCE 2 — LAST.FM TRACK DATA (from the listener\'s own input songs):');
+            lfmRec.push('LAST.FM TRACK DATA:');
             _lfmData.forEach((d, i) => {
                 if (!d) return;
                 lfmRec.push(`  Track ${i+1}: ${d.artist} — ${d.title}`);
@@ -1236,20 +1248,25 @@ Always consider Priority Must-Include artists first as candidates for every reco
             });
         }
         if (_lfmSimilar.length) {
-            lfmRec.push('\nSOURCE 2b — LAST.FM SIMILAR ARTISTS (sonic neighbours to the input tracks):');
-            _lfmSimilar.forEach(s => {
-                lfmRec.push(`  ${s.artist} → similar artists: ${s.similar.join(', ')}`);
-            });
+            lfmRec.push('\nLAST.FM SIMILAR ARTISTS:');
+            _lfmSimilar.forEach(s => lfmRec.push(`  ${s.artist} → ${s.similar.join(', ')}`));
         }
         const lfmBlock = lfmRec.length ? lfmRec.join('\n') + '\n\n' : '';
 
-        const WEB_SEARCH_TOOL = [{ type: 'web_search_20250305', name: 'web_search' }];
+        // ── Compact artist list: strip section headers & blank lines ──
+        const compactArtists = ARTIST_UNIVERSE
+            .split('\n')
+            .filter(line => {
+                const t = line.trim();
+                if (!t) return false;
+                if (t.startsWith('FULL ') || t.startsWith('---') || t.startsWith('Always ')) return false;
+                if (/^[A-Z][A-Z\s\/&.\-]+:$/.test(t)) return false;
+                return true;
+            })
+            .join('\n');
 
-        const system = `You are an expert house music curator. You blend three data sources to find the most sonically precise track recommendations: (1) a curated universe of 1,771 priority house artists, (2) Last.fm similar-artist and tag signals derived from the listener's own tracks, and (3) live web search of Beatport, Traxsource, Resident Advisor and Last.fm for current releases. Prioritise sonic fit over fame. Only recommend real, verifiable songs.`;
-
-        const user = `Based on this listener's DNA profile and calibrated preferences, recommend exactly 6 real, existing house music tracks. Blend all three data sources for the most precise result.
-
-Listener DNA — Vibe Name: ${lastVibe.vibeName}
+        // ── Shared blocks ─────────────────────────────────────────────
+        const dnaBlock = `Vibe: ${lastVibe.vibeName}
 Subgenres: ${(lastVibe.subgenres||[]).join(', ')}
 Energy: ${lastVibe.energyLevel} · BPM: ${lastVibe.bpmRange}
 Mood: ${(lastVibe.moodTags||[]).join(', ')}
@@ -1257,52 +1274,81 @@ Mood: ${(lastVibe.moodTags||[]).join(', ')}
 10-Dimension Profile:
 ${dimSummary}
 
-Instrumentation Profile (prominent instruments in their taste):
-${instrSummary || 'Not available'}
+Instrumentation: ${instrSummary || 'not available'}
 
-Listener Preference Profile (normalised to [-1, +1]):
-- groove_syncopation_preference: ${norm(sliderPrefs.groove)}  (${sliderPrefs.groove}/7 — lower = locked/driving, higher = swung/syncopated)
-- timbre_brightness_preference: ${norm(sliderPrefs.texture)}  (${sliderPrefs.texture}/7 — lower = warm/analog, higher = clean/digital)
-- harmonic_density_preference: ${norm(sliderPrefs.harmonic)}  (${sliderPrefs.harmonic}/7 — lower = hypnotic/minimal, higher = melodic/harmonic)
-- section_contrast_preference: ${norm(sliderPrefs.structural)}  (${sliderPrefs.structural}/7 — lower = steady groove, higher = build/breakdown arc)
-- novelty_tolerance: ${norm(sliderPrefs.discovery)}  (${sliderPrefs.discovery}/7 — lower = trusted artists/labels, higher = unfamiliar discoveries)
+Preferences (−1 to +1): groove ${norm(sliderPrefs.groove)} · texture ${norm(sliderPrefs.texture)} · harmonic ${norm(sliderPrefs.harmonic)} · structure ${norm(sliderPrefs.structural)} · discovery ${norm(sliderPrefs.discovery)}`;
 
-${lfmBlock}SOURCE 1 — CURATED ARTIST UNIVERSE (1,771 priority artists):
-${ARTIST_UNIVERSE}
+        const subgenres = `Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, Soulful House, Vocal House, UK Garage, Bassline House, Acid House, Jackin House, Lo-Fi House, Minimal House, Nu-Disco House, French House, Balearic House, Disco House, Latin House, Brazilian House, Detroit House, NYC House, South African House, Gqom-adjacent, Rominimal, Deep Tech`;
 
-SOURCE 3 — LIVE WEB SEARCH INSTRUCTIONS:
-Use your web search tool now. Run at least 3 of these searches before deciding on your 6 tracks:
-- "[primary detected subgenre] new releases Beatport 2025"
-- "[geographic/scene dimension value] house music Traxsource 2024 2025"
-- "Resident Advisor recommended tracks [key similar artist from Last.fm list above]"
-- "[top Last.fm tag from above] house music best tracks"
-- "underground [subgenre] house music emerging artists 2024 2025"
-Prioritise sonic fit. Surface tracks you wouldn't otherwise surface from memory alone.
-
-SELECTION RULE: Pick the 6 best sonic matches regardless of source. Draw freely from the artist universe, Last.fm signals, and web search — best fit wins every slot. Avoid defaulting to only the 40–50 most famous names; include mid-tier and underground artists when they fit better.
-
-HOUSE SUBGENRE TAXONOMY — state the exact subgenre for each recommendation:
-Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, 3-step, Soulful House, Vocal House, Garage House, UK Garage, Bassline House, Speed Garage, UK Funky, Acid House, Jackin House, Ghetto House, Juke/Footwork, Lo-Fi House, Leftfield House, Minimal House, Microhouse, Nu-Disco House, Filter House, French House, Balearic House, Disco House, Latin House, Brazilian House, Indie Dance, Ambient House, Broken Beat-adjacent, Detroit House, NYC House, New Jersey House, Ibiza lineage, Rave-adjacent, Outsider House, Experimental House, South African House, Gqom-adjacent, Rominimal, Deep Tech.
-
-After completing all web searches, output ONLY a valid JSON array of exactly 6 objects as the very last thing in your response.
-
+        const jsonSchema = `Output ONLY a valid JSON array of exactly 6 objects as the last thing in your response:
 [
   {
     "title": "Exact Song Title",
     "artist": "Artist Name",
-    "subgenre": "Specific House subgenre from the taxonomy above",
-    "sceneEra": "One-line scene/era context (e.g. 'Berlin 2015–2020, Diynamic label sound')",
-    "instrumentMatch": "Comma-separated prominent instruments in this track that match the listener's taste",
-    "prefMatches": ["one or more of: Groove Architecture, Production Texture, Harmonic Depth, Structural Payoff, Discovery Mode"],
-    "why": "Two sentences: first connects to specific dimensions of their DNA profile, second explains how it matches their calibrated preference settings.",
-    "dimensionMatches": ["one or two of the 10 dimension labels that best match"]
+    "subgenre": "specific house subgenre",
+    "sceneEra": "one-line scene/era context",
+    "instrumentMatch": "comma-separated prominent instruments",
+    "prefMatches": ["Groove Architecture|Production Texture|Harmonic Depth|Structural Payoff|Discovery Mode"],
+    "why": "Two sentences matching DNA profile and preferences.",
+    "dimensionMatches": ["one or two dimension labels"]
   }
 ]`;
 
+        // ── Stage 1: fast call — no web search (30s) ──────────────────
+        const systemFast = `You are an expert house music curator. Use the curated artist universe and Last.fm signals to find the most sonically precise track recommendations. Prioritise sonic fit over fame. Only recommend real, verifiable songs.`;
+
+        const userFast = `Recommend exactly 6 real house music tracks for this listener.
+
+${dnaBlock}
+
+${lfmBlock}ARTIST UNIVERSE (1,771 priority artists):
+${compactArtists}
+
+SELECTION RULE: Pick the 6 best sonic matches. Include mid-tier and underground artists — avoid defaulting to only the top 40–50 most famous names.
+
+SUBGENRES: ${subgenres}
+
+${jsonSchema}`;
+
+        // ── Stage 2: web search fallback (180s) ───────────────────────
+        const WEB_SEARCH_TOOL = [{ type: 'web_search_20250305', name: 'web_search' }];
+
+        const systemWeb = `You are an expert house music curator. Blend a curated artist universe, Last.fm signals, and live web search to find the most sonically precise track recommendations. Prioritise sonic fit over fame. Only recommend real, verifiable songs.`;
+
+        const userWeb = `Recommend exactly 6 real house music tracks for this listener. Use web search to surface tracks beyond your training data.
+
+${dnaBlock}
+
+${lfmBlock}ARTIST UNIVERSE:
+${ARTIST_UNIVERSE}
+
+WEB SEARCH — run 2–3 searches before deciding:
+- "[primary subgenre] new releases Beatport 2025"
+- "[scene/geographic profile value] house music Traxsource 2025"
+- "underground [subgenre] house emerging artists 2024 2025"
+
+SELECTION RULE: Pick the 6 best sonic matches regardless of source. Include mid-tier and underground artists — avoid defaulting to only the top 40–50 most famous names.
+
+SUBGENRES: ${subgenres}
+
+After web searches, ${jsonSchema}`;
+
         try {
-            const raw   = await callAPI(system, user, 4000, WEB_SEARCH_TOOL, 120000);
-            const songs = parseJSON(raw);
-            if (!Array.isArray(songs)) throw new Error('Unexpected response format.');
+            let songs;
+            try {
+                const raw = await callAPI(systemFast, userFast, 3200, null, 30000);
+                songs = parseJSON(raw);
+            } catch (stageOneErr) {
+                // Hard errors (API key, HTTP) — propagate immediately
+                if (stageOneErr.message.startsWith('Please enter') || stageOneErr.message.startsWith('API error')) {
+                    throw stageOneErr;
+                }
+                // Soft error (timeout, parse failure) — escalate to web search
+                setStatus('Expanding with live web search…');
+                const raw = await callAPI(systemWeb, userWeb, 4000, WEB_SEARCH_TOOL, 180000);
+                songs = parseJSON(raw);
+            }
+            if (!Array.isArray(songs)) throw new Error('Unexpected response format — please try again.');
             renderSongs(songs);
         } catch (err) {
             document.getElementById('songsArea').innerHTML = `<div class="card"><div class="error">${esc(err.message)}</div></div>`;
