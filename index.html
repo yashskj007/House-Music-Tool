@@ -1217,7 +1217,7 @@ Laurent Garnier
 
 `;
 
-    // ── Step 2: Find songs ────────────────────────────────────────
+    // ── Step 2: Find songs (CALL 1 — fast, no web search) ───────────
     async function findSongs() {
         if (!lastVibe) return;
 
@@ -1280,7 +1280,7 @@ Laurent Garnier
         }
         const lfmBlock = lfmRec.length ? lfmRec.join('\n') + '\n\n' : '';
 
-        // ── Compact artist list: strip section headers & blank lines ──
+        // ── Compact artist list ───────────────────────────────────────
         const compactArtists = ARTIST_UNIVERSE
             .split('\n')
             .filter(line => {
@@ -1303,9 +1303,9 @@ Laurent Garnier
 
         const subgenres = `Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, Soulful House, Vocal House, UK Garage, Bassline House, Acid House, Jackin House, Lo-Fi House, Minimal House, Nu-Disco House, French House, Balearic House, Disco House, Latin House, Brazilian House, Detroit House, NYC House, South African House, Gqom-adjacent, Rominimal, Deep Tech`;
 
-        const system = `You are an expert house music curator. Use weighted scoring across analysis dimensions, slider preferences, and free text context to surface the most sonically precise recommendations. Prioritise sonic fit over fame. Only recommend real, verifiable songs.`;
+        const system = `You are an expert house music curator. Use weighted scoring across analysis dimensions and slider preferences to surface the most sonically precise recommendations from the curated artist universe and Last.fm signals. Only recommend real, verifiable songs.`;
 
-        const user = `Recommend 6–8 real house music tracks using weighted scoring.
+        const user = `Recommend exactly 6 real house music tracks using weighted scoring.
 
 ${weightsBlock}
 
@@ -1322,20 +1322,11 @@ Energy: ${lastVibe.energyLevel} · BPM: ${lastVibe.bpmRange} · Mood: ${(lastVib
 ${lfmBlock}ARTIST UNIVERSE (1,771 priority artists):
 ${compactArtists}
 
-WEB SEARCH — run exactly 2 searches before finalising:
-- "[primary subgenre from analysis] best tracks Beatport 2025"
-- "${hasFreeText ? '[artist or mood keyword from the free text above]' : '[scene or geographic value from analysis]'} house music Traxsource 2025"
-
-INSTRUCTIONS:
-1. Score each candidate across all active weights
-2. Select the 6–8 highest-scoring songs
-3. For each track, state which weights drove the match
-4. Never default to the 40–50 most famous names — best sonic fit wins
-5. Draw from ARTIST_UNIVERSE, Last.fm similar-artist signals, and web search results
+SELECTION RULE: Pick the 6 best-scoring songs from ARTIST_UNIVERSE and Last.fm signals. Include mid-tier and underground artists — never default to only the top 40–50 most famous names.
 
 SUBGENRES: ${subgenres}
 
-After web searches, output ONLY a valid JSON array as the very last thing in your response:
+Output ONLY a valid JSON array of exactly 6 objects:
 [
   {
     "title": "Exact Song Title",
@@ -1344,18 +1335,17 @@ After web searches, output ONLY a valid JSON array as the very last thing in you
     "sceneEra": "one-line scene/era context",
     "instrumentMatch": "comma-separated prominent instruments",
     "weightMatch": "e.g. Weight A: Geographic DNA + Weight B: Harmonic Depth + Weight C: 'late night' mood",
-    "why": "Two sentences: first connects dominant dimension matches, second explains preference and free text fit.",
+    "why": "Two sentences: first connects dominant dimension matches, second explains preference fit.",
     "dimensionMatches": ["one or two dimension labels"]
   }
 ]`;
 
-        const WEB_SEARCH_TOOL = [{ type: 'web_search_20250305', name: 'web_search' }];
-
         try {
-            const raw   = await callAPI(system, user, 4000, WEB_SEARCH_TOOL, 180000);
+            const raw   = await callAPI(system, user, 3200, null, 60000);
             const songs = parseJSON(raw);
             if (!Array.isArray(songs)) throw new Error('Unexpected response format — please try again.');
             renderSongs(songs, hasFreeText ? freeText : null);
+            runFreshDiscoveries(songs);
         } catch (err) {
             const msg = err.message.includes('timed out')
                 ? 'Taking longer than expected — the music universe is vast. Please try again.'
@@ -1366,6 +1356,85 @@ After web searches, output ONLY a valid JSON array as the very last thing in you
             clearInterval(cycleTimer);
             btn.disabled = false;
             inner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Find My Resonance`;
+        }
+    }
+
+    // ── CALL 2: background web search for fresh discoveries ───────────
+    async function runFreshDiscoveries(existingSongs) {
+        if (!lastVibe) return;
+        const container = document.querySelector('#songsArea .song-cards');
+        if (!container) return;
+
+        container.insertAdjacentHTML('beforeend',
+            `<div id="fresh-loader" style="display:flex;align-items:center;gap:10px;padding:14px 0;border-top:1px solid rgba(201,168,76,0.08);color:var(--muted);font-size:11.5px;letter-spacing:0.04em">
+                <div class="spinner" style="width:12px;height:12px;border-width:1.5px;flex-shrink:0"></div>
+                Searching for fresh discoveries via web…
+            </div>`);
+
+        try {
+            const existingList = existingSongs.map(s => `${s.artist} — ${s.title}`).join('\n');
+
+            const system = `You are an expert house music curator finding fresh current tracks via web search.`;
+            const user   = `Find 1–2 fresh house music tracks via exactly 1 web search. Do NOT repeat any tracks listed below.
+
+Already recommended — exclude these:
+${existingList}
+
+Listener profile: ${lastVibe.vibeName} · ${(lastVibe.subgenres||[]).join(', ')} · ${lastVibe.energyLevel} · BPM ${lastVibe.bpmRange}
+
+Search for: "[primary subgenre] new release Beatport OR Traxsource 2025"
+
+Return 1–2 genuinely different tracks from the search results that fit this listener's style.
+
+Output ONLY a valid JSON array of 1–2 objects:
+[
+  {
+    "title": "Track Title",
+    "artist": "Artist Name",
+    "subgenre": "specific house subgenre",
+    "sceneEra": "one-line context",
+    "why": "One sentence: why this is a fresh discovery that fits this listener."
+  }
+]`;
+
+            const WEB_SEARCH_TOOL = [{ type: 'web_search_20250305', name: 'web_search' }];
+            const raw        = await callAPI(system, user, 1500, WEB_SEARCH_TOOL, 120000);
+            const freshSongs = parseJSON(raw);
+
+            if (!Array.isArray(freshSongs) || freshSongs.length === 0) return;
+
+            const existingSet = new Set(existingSongs.map(s => (s.artist + '|' + s.title).toLowerCase()));
+            const newSongs    = freshSongs.filter(s => !existingSet.has((s.artist + '|' + s.title).toLowerCase()));
+            if (newSongs.length === 0) return;
+
+            const freshCards = newSongs.map(s => `
+                <div class="song-card">
+                    <div class="song-num" style="letter-spacing:0.18em">✦ Fresh Discovery</div>
+                    <div class="song-title">${esc(s.title)}</div>
+                    <div class="song-artist">${esc(s.artist)}</div>
+                    ${s.subgenre ? `<div class="song-subgenre">${esc(s.subgenre)}</div>` : ''}
+                    ${s.sceneEra ? `<div class="song-scene">${esc(s.sceneEra)}</div>` : ''}
+                    <div class="song-why">${esc(s.why)}</div>
+                    <div class="song-links">
+                        <a class="link-btn link-yt" href="${searchUrl('yt', s.artist, s.title)}" target="_blank" rel="noopener">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>YouTube</a>
+                        <a class="link-btn link-sp" href="${searchUrl('sp', s.artist, s.title)}" target="_blank" rel="noopener">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 0 1 .207.857zm1.223-2.722a.779.779 0 0 1-1.071.257c-2.687-1.652-6.785-2.131-9.965-1.166a.779.779 0 0 1-.435-1.493c3.632-1.057 8.147-.546 11.214 1.331a.779.779 0 0 1 .257 1.071zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 1 1-.543-1.79c3.532-1.072 9.404-.865 13.115 1.337a.935.935 0 0 1-.955 1.61z"/></svg>Spotify</a>
+                    </div>
+                </div>`).join('');
+
+            const divider = `<div style="padding:12px 0 4px;border-top:1px solid rgba(201,168,76,0.12)">
+                <div class="section-lbl" style="margin-bottom:0">✦ Fresh Discoveries — via live web search</div>
+            </div>`;
+
+            const c = document.querySelector('#songsArea .song-cards');
+            if (c) c.insertAdjacentHTML('beforeend', divider + freshCards);
+
+        } catch (_) {
+            // Silently fail — user already has CALL 1 results
+        } finally {
+            const loader = document.getElementById('fresh-loader');
+            if (loader) loader.remove();
         }
     }
 
