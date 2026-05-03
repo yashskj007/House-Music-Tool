@@ -98,6 +98,17 @@ To regenerate `artist-reference.md` after CSV changes, run the extraction script
 
 ---
 
+## Standing Instructions
+> These rules apply at the end of **every** Claude Code session, without exception.
+
+1. **Update the Session Log** — Before committing, add a row to the Session Log table describing what was built or changed this session.
+2. **Record new design decisions** — If any new design choices were made (colours, layout, component patterns), add them to the Design System section.
+3. **Register new files** — If any new files were created, add them to the Context Files table with a one-line description.
+4. **Mark completed features** — If any planned features were finished, mark them as done wherever they are tracked in this file.
+5. **Always commit CLAUDE.md** — Include CLAUDE.md in every `git push`, even if the only change is the Session Log row.
+
+---
+
 ## Git Workflow
 After every Claude Code session:
 ```
