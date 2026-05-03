@@ -19,28 +19,21 @@
         }
 
         body {
-            background: var(--bg);
-            color: var(--text);
+            background: var(--bg); color: var(--text);
             font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            overflow-x: hidden;
-            line-height: 1.6;
+            min-height: 100vh; overflow-x: hidden; line-height: 1.6;
         }
 
-        /* ── Site header bar ── */
+        /* ── Site header ── */
         .site-header {
             position: sticky; top: 0; z-index: 100;
-            background: var(--bg);
-            border-bottom: 1px solid var(--accent);
-            padding: 13px 32px;
-            display: flex; align-items: center;
+            background: var(--bg); border-bottom: 1px solid var(--accent);
+            padding: 13px 32px; display: flex; align-items: center;
         }
-
         .site-title {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 11px; font-weight: 700;
-            letter-spacing: 0.22em; text-transform: uppercase;
-            color: var(--accent);
+            letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent);
         }
 
         /* ── Container ── */
@@ -52,123 +45,80 @@
 
         /* ── Page header ── */
         .page-header { text-align: center; margin-bottom: 24px; }
-
-        .logo {
-            display: inline-flex; align-items: center; gap: 10px;
-            margin-bottom: 20px;
-        }
-
+        .logo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px; }
         .logo-icon {
-            width: 36px; height: 36px;
-            border: 1px solid var(--accent);
-            display: flex; align-items: center; justify-content: center;
-            color: var(--accent);
+            width: 36px; height: 36px; border: 1px solid var(--accent);
+            display: flex; align-items: center; justify-content: center; color: var(--accent);
         }
-
         .logo-wordmark {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 11px; font-weight: 700;
-            letter-spacing: 0.2em; text-transform: uppercase;
-            color: var(--accent);
+            letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent);
         }
-
         h1 {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(28px, 6vw, 44px);
-            font-weight: 800; line-height: 1.1; letter-spacing: -1.5px;
-            color: var(--text);
-            margin-bottom: 14px;
+            font-size: clamp(28px, 6vw, 44px); font-weight: 800;
+            line-height: 1.1; letter-spacing: -1.5px; color: var(--text); margin-bottom: 14px;
         }
-
-        .subtitle {
-            color: var(--muted);
-            font-size: 14px; letter-spacing: 0.3px;
-            line-height: 1.7;
-        }
+        .subtitle { color: var(--muted); font-size: 14px; letter-spacing: 0.3px; line-height: 1.7; }
 
         /* ── Shared card ── */
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 2px; padding: 36px;
-        }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 2px; padding: 36px; }
 
         /* ── Form fields ── */
         .field { margin-bottom: 22px; }
-
         label {
             display: flex; align-items: center; gap: 8px;
-            font-size: 10px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.15em;
-            color: var(--muted); margin-bottom: 10px;
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.15em; color: var(--muted); margin-bottom: 10px;
         }
-
         .dot { width: 4px; height: 4px; background: var(--accent); flex-shrink: 0; }
-
         .save-badge {
             margin-left: auto; font-size: 10px; font-weight: 600;
             color: var(--accent); letter-spacing: 0.08em;
             opacity: 0; transition: opacity 0.3s; text-transform: none;
         }
         .save-badge.show { opacity: 1; }
-
         .badge-optional {
-            margin-left: auto; font-size: 9px; font-weight: 600;
-            padding: 2px 7px;
-            border: 1px solid rgba(201,168,76,0.3);
-            color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+            margin-left: auto; font-size: 9px; font-weight: 600; padding: 2px 7px;
+            border: 1px solid rgba(201,168,76,0.3); color: var(--accent);
+            letter-spacing: 0.08em; text-transform: uppercase;
         }
-
         input[type="password"], textarea {
-            width: 100%;
-            background: transparent;
+            width: 100%; background: transparent;
             border: 1px solid rgba(255,255,255,0.1); border-radius: 2px;
             color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px;
             outline: none; transition: border-color 0.15s, background 0.15s;
         }
-
         input[type="password"] { padding: 14px 18px; letter-spacing: 4px; }
         textarea { padding: 18px 20px; resize: none; line-height: 1.85; height: 178px; }
-
         input[type="password"]:focus, textarea:focus {
-            border-color: rgba(201,168,76,0.5);
-            background: rgba(201,168,76,0.02);
+            border-color: rgba(201,168,76,0.5); background: rgba(201,168,76,0.02);
         }
-
         ::placeholder { color: rgba(255,255,255,0.15); }
-
         .hint {
             display: flex; align-items: flex-start; gap: 6px;
             margin-top: 8px; font-size: 11px; color: var(--muted); line-height: 1.6;
         }
         .hint svg { flex-shrink: 0; margin-top: 2px; }
-
         .divider { height: 1px; background: rgba(201,168,76,0.12); margin: 28px 0; }
 
         /* ── Primary button ── */
         .btn-primary {
-            width: 100%; padding: 16px;
-            background: transparent;
-            border: 1px solid var(--accent); border-radius: 2px;
-            color: var(--accent);
+            width: 100%; padding: 16px; background: transparent;
+            border: 1px solid var(--accent); border-radius: 2px; color: var(--accent);
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 12px; font-weight: 700;
-            letter-spacing: 0.15em; text-transform: uppercase;
+            font-size: 12px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
             cursor: pointer; transition: background 0.15s;
         }
         .btn-primary:hover  { background: rgba(201,168,76,0.07); }
         .btn-primary:active { background: rgba(201,168,76,0.14); }
         .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-
         .btn-inner { display: flex; align-items: center; justify-content: center; gap: 12px; }
 
         /* ── Waveform ── */
         .waveform { display: flex; align-items: center; gap: 3px; height: 16px; }
-
-        .wb {
-            width: 2px; background: var(--accent);
-            border-radius: 1px; animation: wave 1.1s ease-in-out infinite;
-        }
+        .wb { width: 2px; background: var(--accent); border-radius: 1px; animation: wave 1.1s ease-in-out infinite; }
         .wb:nth-child(1) { height: 35%; animation-delay: 0.00s; }
         .wb:nth-child(2) { height: 65%; animation-delay: 0.10s; }
         .wb:nth-child(3) { height: 100%; animation-delay: 0.20s; }
@@ -176,7 +126,6 @@
         .wb:nth-child(5) { height: 85%; animation-delay: 0.20s; }
         .wb:nth-child(6) { height: 45%; animation-delay: 0.10s; }
         .wb:nth-child(7) { height: 70%; animation-delay: 0.00s; }
-
         @keyframes wave {
             0%, 100% { transform: scaleY(0.35); opacity: 0.45; }
             50%       { transform: scaleY(1);    opacity: 1;    }
@@ -185,8 +134,7 @@
         /* ── Spinner ── */
         .spinner {
             width: 15px; height: 15px;
-            border: 1.5px solid rgba(201,168,76,0.3);
-            border-top-color: var(--accent);
+            border: 1.5px solid rgba(201,168,76,0.3); border-top-color: var(--accent);
             border-radius: 50%; animation: spin 0.75s linear infinite; flex-shrink: 0;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -202,76 +150,57 @@
         .vibe-name {
             font-family: 'Space Grotesk', sans-serif;
             font-size: clamp(22px, 5vw, 34px); font-weight: 800;
-            letter-spacing: -1px; line-height: 1.15;
-            color: var(--text); margin-bottom: 18px;
+            letter-spacing: -1px; line-height: 1.15; color: var(--text); margin-bottom: 18px;
         }
-
         .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 24px; }
-
         .tag {
-            padding: 4px 11px;
-            font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-            border: 1px solid rgba(201,168,76,0.25);
-            color: var(--accent); text-transform: uppercase;
+            padding: 4px 11px; font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+            border: 1px solid rgba(201,168,76,0.25); color: var(--accent); text-transform: uppercase;
         }
-
         .stats {
             display: grid; grid-template-columns: repeat(3, 1fr);
             gap: 1px; margin-bottom: 26px;
-            background: rgba(201,168,76,0.1);
-            border: 1px solid rgba(201,168,76,0.12);
+            background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.12);
         }
         .stat { background: var(--card); padding: 16px 14px; text-align: center; }
-
         .stat-lbl {
             font-size: 9px; font-weight: 700; text-transform: uppercase;
             letter-spacing: 0.15em; color: var(--muted); margin-bottom: 8px;
         }
         .stat-val {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 16px; font-weight: 700; line-height: 1.25;
-            font-variant-numeric: tabular-nums;
+            font-size: 16px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums;
         }
-
         .section-lbl {
             font-size: 9px; font-weight: 700; text-transform: uppercase;
             letter-spacing: 0.15em; color: var(--muted); margin-bottom: 12px;
         }
-
         .recs {
             display: flex; flex-direction: column;
-            border: 1px solid rgba(201,168,76,0.12);
-            margin-bottom: 26px;
+            border: 1px solid rgba(201,168,76,0.12); margin-bottom: 26px;
         }
         .rec {
-            display: flex; align-items: flex-start; gap: 16px;
-            padding: 14px 16px;
-            border-bottom: 1px solid rgba(201,168,76,0.08);
-            transition: background 0.15s;
+            display: flex; align-items: flex-start; gap: 16px; padding: 14px 16px;
+            border-bottom: 1px solid rgba(201,168,76,0.08); transition: background 0.15s;
         }
         .rec:last-child { border-bottom: none; }
         .rec:hover { background: rgba(201,168,76,0.03); }
-
         .rec-num {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 11px; font-weight: 700; color: var(--accent);
-            min-width: 20px; flex-shrink: 0; padding-top: 1px;
+            font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700;
+            color: var(--accent); min-width: 20px; flex-shrink: 0; padding-top: 1px;
             font-variant-numeric: tabular-nums;
         }
         .rec-artist { font-size: 14px; font-weight: 600; }
         .rec-reason { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.55; }
-
         .scene-card {
-            border: 1px solid rgba(201,168,76,0.15);
-            border-left: 2px solid var(--accent);
+            border: 1px solid rgba(201,168,76,0.15); border-left: 2px solid var(--accent);
             padding: 16px 18px; font-size: 14px; line-height: 1.75;
             color: rgba(255,255,255,0.65); font-style: italic;
         }
 
         /* ── DNA Summary ── */
         .dna-summary-card {
-            border: 1px solid rgba(201,168,76,0.2);
-            border-left: 2px solid var(--accent);
+            border: 1px solid rgba(201,168,76,0.2); border-left: 2px solid var(--accent);
             padding: 20px 22px; margin-bottom: 28px;
         }
         .dna-summary-label {
@@ -286,163 +215,112 @@
             font-size: 9px; font-weight: 700; text-transform: uppercase;
             letter-spacing: 0.15em; color: var(--muted);
             display: flex; align-items: center; gap: 8px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(201,168,76,0.12);
+            padding-bottom: 12px; border-bottom: 1px solid rgba(201,168,76,0.12);
         }
-
         .scorecard { display: flex; flex-direction: column; margin-bottom: 6px; }
-
         .scorecard-row {
             display: grid;
             grid-template-columns: 18px 130px 1fr;
-            grid-template-areas:
-                "icon label value"
-                "icon .     detail";
-            column-gap: 14px;
-            row-gap: 3px;
-            padding: 13px 0;
-            border-bottom: 1px solid rgba(201,168,76,0.07);
-            align-items: center;
+            grid-template-areas: "icon label value" "icon . detail";
+            column-gap: 14px; row-gap: 3px; padding: 13px 0;
+            border-bottom: 1px solid rgba(201,168,76,0.07); align-items: center;
         }
         .scorecard-row:last-child { border-bottom: none; }
+        .row-icon { grid-area: icon; color: var(--accent); display: flex; align-items: flex-start; justify-content: center; padding-top: 1px; }
+        .row-label { grid-area: label; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.13em; color: var(--muted); line-height: 1.3; }
+        .row-value { grid-area: value; font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.3; }
+        .row-detail { grid-area: detail; font-size: 11.5px; line-height: 1.6; color: var(--muted); }
 
-        .row-icon {
-            grid-area: icon; color: var(--accent);
-            display: flex; align-items: flex-start; justify-content: center;
-            padding-top: 1px;
+        /* ── Instrument Profile Table ── */
+        .instrument-section { margin-top: 24px; }
+        .instrument-table { display: flex; flex-direction: column; }
+        .instrument-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 0; border-bottom: 1px solid rgba(201,168,76,0.07);
         }
-        .row-label {
-            grid-area: label;
-            font-size: 9px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.13em; color: var(--muted); line-height: 1.3;
-        }
-        .row-value {
-            grid-area: value;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 13px; font-weight: 600; color: var(--text);
-            font-variant-numeric: tabular-nums; line-height: 1.3;
-        }
-        .row-detail {
-            grid-area: detail;
-            font-size: 11.5px; line-height: 1.6; color: var(--muted);
-        }
+        .instrument-row:last-child { border-bottom: none; }
+        .instrument-name { font-size: 12.5px; color: rgba(255,255,255,0.72); }
+        .instrument-rating { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); min-width: 54px; text-align: right; }
+        .instrument-rating.none { color: var(--muted); }
+        .instrument-rating.low  { color: rgba(201,168,76,0.55); }
 
-        /* ── Preferences ── */
+        /* ── Sliders ── */
         .prefs-header { margin-bottom: 30px; }
-
-        .prefs-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 18px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px;
-        }
+        .prefs-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px; }
         .prefs-subtitle { font-size: 13px; color: var(--muted); line-height: 1.6; }
-
-        .pref-group { margin-bottom: 24px; }
-
-        .pref-q {
-            display: flex; align-items: center; gap: 8px;
-            font-size: 10px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.15em; color: var(--muted); margin-bottom: 10px;
+        .slider-group {
+            margin-bottom: 28px; padding-bottom: 28px;
+            border-bottom: 1px solid rgba(201,168,76,0.08);
         }
-        .pref-q-icon { color: var(--accent); display: flex; align-items: center; flex-shrink: 0; }
-
-        .pref-options { display: grid; gap: 8px; grid-template-columns: repeat(2, 1fr); }
-        .pref-options.cols-3 { grid-template-columns: repeat(3, 1fr); }
-
-        .pref-card {
-            padding: 11px 13px;
-            background: transparent; border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 2px; cursor: pointer;
-            display: flex; align-items: center; gap: 9px;
-            transition: border-color 0.15s, background 0.15s;
-            user-select: none; -webkit-tap-highlight-color: transparent;
+        .slider-group:last-of-type { border-bottom: none; margin-bottom: 24px; }
+        .slider-group-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: var(--accent); margin-bottom: 8px; }
+        .slider-question { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.55; margin-bottom: 16px; font-style: italic; }
+        .slider-poles { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+        .pole-label { font-size: 10.5px; color: var(--muted); line-height: 1.4; flex: 1; }
+        .pole-label.right { text-align: right; }
+        .slider-val {
+            font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
+            color: var(--accent); min-width: 22px; text-align: center; flex-shrink: 0;
+            font-variant-numeric: tabular-nums; padding-top: 1px;
         }
-        .pref-card:hover    { border-color: rgba(201,168,76,0.35); background: rgba(201,168,76,0.03); }
-        .pref-card.selected { border-color: var(--accent); background: rgba(201,168,76,0.06); }
-
-        .pref-emoji { color: var(--accent); display: flex; align-items: center; flex-shrink: 0; }
-        .pref-txt   { font-size: 12.5px; font-weight: 500; line-height: 1.3; flex: 1; }
-
-        .pref-check {
-            width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
-            border: 1px solid rgba(201,168,76,0.4);
-            display: flex; align-items: center; justify-content: center;
-            color: var(--accent); opacity: 0; transition: opacity 0.15s;
+        input[type="range"] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 2px; outline: none; cursor: pointer; border-radius: 0;
         }
-        .pref-card.selected .pref-check { opacity: 1; }
-
-        .pref-progress {
-            display: flex; align-items: center; gap: 6px;
-            margin-bottom: 18px; min-height: 22px;
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 14px; height: 14px; background: var(--accent); border-radius: 50%;
+            cursor: grab; border: 2px solid var(--bg); box-shadow: 0 0 0 1px rgba(201,168,76,0.4);
         }
-        .prog-dot {
-            width: 6px; height: 6px;
-            border: 1px solid rgba(201,168,76,0.3);
-            transition: background 0.2s, border-color 0.2s;
+        input[type="range"]::-moz-range-thumb {
+            width: 14px; height: 14px; background: var(--accent);
+            border-radius: 50%; cursor: grab; border: 2px solid var(--bg);
         }
-        .prog-dot.active { background: var(--accent); border-color: var(--accent); }
-
-        .prog-label {
-            font-size: 10px; color: var(--muted); letter-spacing: 0.08em;
-            text-transform: uppercase; margin-left: 6px;
-        }
-
-        .find-wrap {
-            overflow: hidden; max-height: 0; opacity: 0;
-            transition: max-height 0.4s ease, opacity 0.3s ease;
-        }
-        .find-wrap.show { max-height: 70px; opacity: 1; }
+        input[type="range"]::-webkit-slider-runnable-track { height: 2px; }
+        input[type="range"]:focus { outline: none; }
 
         /* ── Song cards ── */
         .songs-header { margin-bottom: 24px; }
-
-        .songs-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
-            color: var(--text); margin-bottom: 6px;
-        }
+        .songs-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); margin-bottom: 6px; }
         .songs-subtitle { font-size: 13px; color: var(--muted); line-height: 1.6; }
-
         .song-cards { display: flex; flex-direction: column; gap: 10px; }
-
         .song-card {
-            border: 1px solid rgba(201,168,76,0.1);
-            border-left: 2px solid var(--accent);
-            padding: 18px 18px 14px 20px;
-            transition: background 0.15s, border-color 0.15s;
+            border: 1px solid rgba(201,168,76,0.1); border-left: 2px solid var(--accent);
+            padding: 18px 18px 14px 20px; transition: background 0.15s, border-color 0.15s;
         }
         .song-card:hover { background: rgba(201,168,76,0.02); border-color: rgba(201,168,76,0.22); }
+        .song-num { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+        .song-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2; margin-bottom: 4px; color: var(--text); }
+        .song-artist { font-size: 11px; color: var(--accent); font-weight: 600; margin-bottom: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
 
-        .song-num {
-            font-size: 9px; font-weight: 700; letter-spacing: 0.15em;
-            text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
-            font-variant-numeric: tabular-nums;
+        /* ── New song card metadata ── */
+        .song-subgenre {
+            display: inline-block; font-size: 9px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent);
+            border: 1px solid rgba(201,168,76,0.3); padding: 2px 8px; margin-bottom: 9px;
         }
-        .song-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
-            line-height: 1.2; margin-bottom: 4px; color: var(--text);
+        .song-scene {
+            font-size: 11.5px; color: var(--muted); margin-bottom: 10px;
+            font-style: italic; line-height: 1.5;
         }
-        .song-artist {
-            font-size: 11px; color: var(--accent); font-weight: 600;
-            margin-bottom: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+        .song-meta-row {
+            display: flex; align-items: baseline; gap: 8px;
+            font-size: 11.5px; color: rgba(255,255,255,0.6);
+            line-height: 1.55; margin-bottom: 8px;
         }
-        .song-why {
-            font-size: 13px; line-height: 1.75;
-            color: rgba(255,255,255,0.58); margin-bottom: 12px;
+        .song-meta-label {
+            font-size: 8.5px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.12em; color: rgba(201,168,76,0.6);
+            flex-shrink: 0; padding-top: 1px;
         }
+        .pref-matches { display: flex; flex-wrap: wrap; margin-bottom: 10px; font-size: 10.5px; color: var(--muted); }
+        .pref-match-tag + .pref-match-tag::before { content: ' · '; color: rgba(201,168,76,0.35); }
 
-        .dim-matches {
-            display: flex; flex-wrap: wrap;
-            margin-bottom: 12px; font-size: 10.5px; color: var(--muted);
-        }
-        .dim-match-tag + .dim-match-tag::before { content: ' · '; color: rgba(201,168,76,0.35); }
-
+        .song-why { font-size: 13px; line-height: 1.75; color: rgba(255,255,255,0.58); margin-bottom: 12px; }
         .song-links { display: flex; gap: 8px; flex-wrap: wrap; }
-
         .link-btn {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 5px 11px; border-radius: 2px;
-            font-size: 11px; font-weight: 600; text-decoration: none;
+            display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px;
+            border-radius: 2px; font-size: 11px; font-weight: 600; text-decoration: none;
             letter-spacing: 0.05em; transition: background 0.15s;
         }
         .link-yt { background: transparent; border: 1px solid rgba(255,80,80,0.22); color: #FF8080; }
@@ -451,15 +329,15 @@
         .link-sp:hover { background: rgba(30,215,96,0.06); }
 
         /* ── Last.fm note ── */
-        .lfm-note {
-            display: inline-flex; align-items: center; gap: 5px;
-            font-size: 10px; color: var(--muted); margin-top: 8px;
-        }
+        .lfm-note { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); margin-top: 8px; }
 
         @media (max-width: 480px) {
             .scorecard-row { grid-template-columns: 18px 90px 1fr; }
             .site-header { padding: 12px 16px; }
             .card { padding: 24px 20px; }
+            .slider-poles { flex-wrap: wrap; }
+            .pole-label.right { order: 3; text-align: left; }
+            .slider-val { order: 2; }
         }
     </style>
 </head>
@@ -548,9 +426,9 @@
 <script>
     // ── State ──────────────────────────────────────────────────────
     let lastVibe = null;
-    const prefs  = { mood: null, energy: null, vocals: null, direction: null };
+    const sliderPrefs = { groove: 4, texture: 4, harmonic: 4, structural: 4, discovery: 4 };
 
-    // ── SVG icon maps ──────────────────────────────────────────────
+    // ── SVG icons ──────────────────────────────────────────────────
     const DIM_ICONS = {
         tempo:      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10.5,8"/></svg>`,
         harmonic:   `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 8C2.5 5 4.5 5 6 8S9.5 11 11 8 13.5 5 15 8"/></svg>`,
@@ -564,70 +442,7 @@
         dancefloor: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="14" x2="8" y2="2"/><polyline points="4,6 8,2 12,6"/></svg>`,
     };
 
-    const Q_ICONS = {
-        mood:      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><polygon points="8,2 14,8 8,14 2,8"/></svg>`,
-        energy:    `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,2 5,9 9,9 7,14"/></svg>`,
-        vocals:    `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5.5" y="2" width="5" height="7" rx="2.5"/><path d="M3 9.5a5 5 0 0 0 10 0"/><line x1="8" y1="14.5" x2="8" y2="16"/></svg>`,
-        direction: `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><polyline points="6,6 8,4 10,6"/><line x1="8" y1="4" x2="8" y2="12"/></svg>`,
-    };
-
-    const OPT_ICONS = {
-        'Uplifting & euphoric': `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/><line x1="3.1" y1="3.1" x2="4.5" y2="4.5"/><line x1="11.5" y1="11.5" x2="12.9" y2="12.9"/><line x1="12.9" y1="3.1" x2="11.5" y2="4.5"/><line x1="4.5" y1="11.5" x2="3.1" y2="12.9"/></svg>`,
-        'Deep & introspective': `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 8C2.5 4.5 5 2 8 2s5.5 2.5 6 6"/><path d="M2 8C4 10.5 6 11.5 8 11.5S12 10.5 14 8"/></svg>`,
-        'Dark & hypnotic':      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M11 3A6 6 0 1 0 11 13 4 4 0 1 1 11 3"/></svg>`,
-        'Warm & soulful':       `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13.5C8 13.5 3 10 3 6.5a3 3 0 0 1 5-2.24A3 3 0 0 1 13 6.5C13 10 8 13.5 8 13.5z"/></svg>`,
-        'Low & groovy':         `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="12" x2="5.5" y2="12"/><line x1="7" y1="12" x2="10" y2="12"/><line x1="11.5" y1="12" x2="14" y2="12"/></svg>`,
-        'Building tension':     `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2.5" y1="14" x2="2.5" y2="10"/><line x1="7" y1="14" x2="7" y2="6"/><line x1="11.5" y1="14" x2="11.5" y2="2"/></svg>`,
-        'Full energy':          `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 8Q3 5 5 8T9 8T13 8T15 8"/></svg>`,
-        'Peak time anthem':     `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="14" x2="8" y2="2"/><polyline points="4,6 8,2 12,6"/><line x1="5" y1="14" x2="11" y2="14"/></svg>`,
-        'No vocals':            `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>`,
-        'Chopped samples':      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="5" x2="14" y2="5"/><line x1="2" y1="9" x2="8" y2="9"/><line x1="10.5" y1="9" x2="14" y2="9"/><line x1="9.25" y1="7" x2="9.25" y2="11"/></svg>`,
-        'Soulful singing':      `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="4.5" cy="11.5" r="2"/><line x1="6.5" y1="11.5" x2="6.5" y2="4"/><line x1="6.5" y1="4" x2="11" y2="3"/><line x1="11" y1="3" x2="11" y2="9"/></svg>`,
-        'Spoken word vibes':    `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="7" rx="1.5"/><path d="M5 13v-3"/><path d="M11 13v-3"/><line x1="5" y1="7" x2="11" y2="7"/></svg>`,
-        'Stay similar':         `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h10"/><path d="M3 11h10"/><polyline points="10,3 13,5 10,7"/><polyline points="6,9 3,11 6,13"/></svg>`,
-        'Stretch me slightly':  `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2.5"/><circle cx="8" cy="8" r="5.5"/></svg>`,
-        'Surprise me':          `<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="4" cy="4" r="1.2"/><circle cx="12" cy="4" r="1.2"/><circle cx="4" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="8" cy="8" r="1.2"/></svg>`,
-    };
-
     // ── Data ──────────────────────────────────────────────────────
-    const QUESTIONS = [
-        {
-            id: 'mood', label: 'Mood', icon: 'mood', cols: 2,
-            options: [
-                { val: 'Uplifting & euphoric' },
-                { val: 'Deep & introspective' },
-                { val: 'Dark & hypnotic'      },
-                { val: 'Warm & soulful'       },
-            ]
-        },
-        {
-            id: 'energy', label: 'Energy', icon: 'energy', cols: 2,
-            options: [
-                { val: 'Low & groovy'      },
-                { val: 'Building tension'  },
-                { val: 'Full energy'       },
-                { val: 'Peak time anthem'  },
-            ]
-        },
-        {
-            id: 'vocals', label: 'Vocals', icon: 'vocals', cols: 2,
-            options: [
-                { val: 'No vocals'         },
-                { val: 'Chopped samples'   },
-                { val: 'Soulful singing'   },
-                { val: 'Spoken word vibes' },
-            ]
-        },
-        {
-            id: 'direction', label: 'Direction', icon: 'direction', cols: 3,
-            options: [
-                { val: 'Stay similar'        },
-                { val: 'Stretch me slightly' },
-                { val: 'Surprise me'         },
-            ]
-        },
-    ];
-
     const DIMENSION_META = [
         { id: 'tempo',       label: 'Tempo & Rhythm DNA'       },
         { id: 'harmonic',    label: 'Harmonic Palette'          },
@@ -639,6 +454,39 @@
         { id: 'scene',       label: 'Cultural & Scene Position' },
         { id: 'listener',    label: 'Listener Profile'          },
         { id: 'dancefloor',  label: 'Dancefloor Function'       },
+    ];
+
+    const SLIDERS = [
+        {
+            key: 'groove',     label: 'Groove Architecture',
+            question: 'When a house record really works for you, what does the groove feel like?',
+            left:  'Locked / straight / driving / relentless',
+            right: 'Swung / syncopated / percussive / breathing',
+        },
+        {
+            key: 'texture',    label: 'Production Texture',
+            question: 'What production finish draws you in most?',
+            left:  'Warm / dusty / analog / raw / organic',
+            right: 'Clean / bright / polished / surgical / digital',
+        },
+        {
+            key: 'harmonic',   label: 'Harmonic Depth',
+            question: 'What do you want the music to do to you?',
+            left:  'Hypnotize through repetition and restraint',
+            right: 'Move me through chords, melody and emotional lift',
+        },
+        {
+            key: 'structural', label: 'Structural Payoff',
+            question: 'Across a long house track, what do you value most?',
+            left:  'Unwavering groove — stays in the pocket throughout',
+            right: 'A journey — builds, breakdowns, tension and release',
+        },
+        {
+            key: 'discovery',  label: 'Discovery Mode',
+            question: 'If two records fit your sonic lane equally, which do you choose?',
+            left:  'Trusted artist / label / scene I already know',
+            right: 'Unfamiliar corner of house that stretches me a bit',
+        },
     ];
 
     // ── Persist API keys ──────────────────────────────────────────
@@ -657,7 +505,6 @@
         clearTimeout(apiKeyEl._t);
         apiKeyEl._t = setTimeout(() => saveBadge.classList.remove('show'), 2200);
     });
-
     lastfmEl.addEventListener('input', () => {
         localStorage.setItem('lastfm_api_key', lastfmEl.value);
     });
@@ -676,6 +523,11 @@
         if (platform === 'yt')
             return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q).replace(/%20/g,'+');
         return 'https://open.spotify.com/search/' + encodeURIComponent(q);
+    }
+
+    function trackBg(val) {
+        const pct = ((val - 1) / 6) * 100;
+        return `linear-gradient(to right, var(--accent) ${pct}%, rgba(201,168,76,0.2) ${pct}%)`;
     }
 
     async function callAPI(systemPrompt, userPrompt, maxTokens = 1400) {
@@ -775,10 +627,8 @@
         document.getElementById('prefsArea').innerHTML = '';
         document.getElementById('songsArea').innerHTML = '';
         lastVibe = null;
-        Object.keys(prefs).forEach(k => prefs[k] = null);
 
         const lfmData = await fetchLastFmData(tracks);
-
         const trackList = tracks.map((t, i) => `${i + 1}. ${t.artist} - ${t.title}`).join('\n');
 
         let lfmContext = '';
@@ -792,7 +642,7 @@
 
         const system = `You are an expert house music curator, DJ, and cultural analyst with encyclopaedic knowledge of electronic music subgenres, labels, scenes, and culture.`;
 
-        const user = `Analyse these tracks across 10 dimensions and return ONLY valid JSON — no markdown, no prose outside the JSON.
+        const user = `Analyse these tracks across 10 dimensions plus an instrument profile, and return ONLY valid JSON — no markdown, no prose outside the JSON.
 
 Tracks:
 ${trackList}${lfmContext}
@@ -802,16 +652,30 @@ Return exactly this structure:
   "vibeName": "Creative evocative name (e.g. 'Afterhours Deep Seeker')",
   "vibeDNA": "A rich 3-4 sentence paragraph synthesising the listener's overall taste fingerprint across all 5 songs.",
   "dimensions": [
-    { "id": "tempo",      "value": "e.g. '124-128 BPM · deep swing'",        "detail": "One sentence on rhythmic feel and groove philosophy." },
-    { "id": "harmonic",   "value": "e.g. 'Minor modes · dark tension'",       "detail": "One sentence on key preferences and harmonic language." },
-    { "id": "texture",    "value": "e.g. 'Dense layers · analogue warmth'",   "detail": "One sentence on layering density and sound design philosophy." },
-    { "id": "emotional",  "value": "e.g. 'Slow burn to catharsis'",           "detail": "One sentence on the emotional journey these tracks create." },
-    { "id": "vocal",      "value": "e.g. 'Sparse · processed · hypnotic'",    "detail": "One sentence on vocal style and processing across these selections." },
-    { "id": "production", "value": "e.g. '2010s Berlin · hardware-driven'",   "detail": "One sentence on production era and synthesis approach." },
-    { "id": "geographic", "value": "e.g. 'Berlin / Ibiza hybrid'",            "detail": "One sentence on scene origins and club culture ties." },
+    { "id": "tempo",      "value": "e.g. '124-128 BPM · deep swing'",         "detail": "One sentence on rhythmic feel and groove philosophy." },
+    { "id": "harmonic",   "value": "e.g. 'Minor modes · dark tension'",        "detail": "One sentence on key preferences and harmonic language." },
+    { "id": "texture",    "value": "e.g. 'Dense layers · analogue warmth'",    "detail": "One sentence on layering density and sound design philosophy." },
+    { "id": "emotional",  "value": "e.g. 'Slow burn to catharsis'",            "detail": "One sentence on the emotional journey these tracks create." },
+    { "id": "vocal",      "value": "e.g. 'Sparse · processed · hypnotic'",     "detail": "One sentence on vocal style and processing." },
+    { "id": "production", "value": "e.g. '2010s Berlin · hardware-driven'",    "detail": "One sentence on production era and synthesis approach." },
+    { "id": "geographic", "value": "e.g. 'Berlin / Ibiza hybrid'",             "detail": "One sentence on scene origins and club culture ties." },
     { "id": "scene",      "value": "e.g. 'Deep underground · Berghain circle'","detail": "One sentence on underground vs mainstream positioning." },
     { "id": "listener",   "value": "Listener archetype${lfmData && lfmData.some(Boolean) ? ' (use real Last.fm listener counts)' : ''}",  "detail": "One sentence on who listens to these tracks${lfmData && lfmData.some(Boolean) ? ', using Last.fm data' : ''}." },
-    { "id": "dancefloor", "value": "e.g. '3am peak · intimate rooms'",        "detail": "One sentence on time of night, venue size, floor energy." }
+    { "id": "dancefloor", "value": "e.g. '3am peak · intimate rooms'",         "detail": "One sentence on time of night, venue size, floor energy." }
+  ],
+  "instrumentProfile": [
+    { "name": "Kick drum & sub bass",                                 "prominence": "None | Low | Medium | High" },
+    { "name": "Hi-hats, cymbals & percussion",                        "prominence": "None | Low | Medium | High" },
+    { "name": "Bassline (melodic bass)",                              "prominence": "None | Low | Medium | High" },
+    { "name": "Synthesizer pads & chords",                            "prominence": "None | Low | Medium | High" },
+    { "name": "Piano & keys",                                         "prominence": "None | Low | Medium | High" },
+    { "name": "Organic percussion (congas, bongos, shakers, djembe)", "prominence": "None | Low | Medium | High" },
+    { "name": "Strings & orchestral elements",                        "prominence": "None | Low | Medium | High" },
+    { "name": "Vocals (lead & backing)",                              "prominence": "None | Low | Medium | High" },
+    { "name": "Guitar (acoustic or electric)",                        "prominence": "None | Low | Medium | High" },
+    { "name": "Trumpet, brass & wind instruments",                    "prominence": "None | Low | Medium | High" },
+    { "name": "Flute & woodwind",                                     "prominence": "None | Low | Medium | High" },
+    { "name": "Marimba & mallet instruments",                         "prominence": "None | Low | Medium | High" }
   ],
   "subgenres": ["subgenre1", "subgenre2", "subgenre3"],
   "energyLevel": "Low | Medium | High | Peak",
@@ -826,7 +690,7 @@ Return exactly this structure:
 }`;
 
         try {
-            const raw  = await callAPI(system, user, 3000);
+            const raw  = await callAPI(system, user, 3200);
             const vibe = parseJSON(raw);
             lastVibe   = vibe;
             lastVibe._lfmData = lfmData;
@@ -887,7 +751,7 @@ Return exactly this structure:
             </div>`;
     }
 
-    // ── Render 10-dimension scorecard ─────────────────────────────
+    // ── Render 10-dimension scorecard + instrument table ──────────
     function renderDimensions(v, lfmData) {
         const dims = v.dimensions || [];
         const dimMap = {};
@@ -903,6 +767,28 @@ Return exactly this structure:
                 <span class="row-detail">${esc(d.detail)}</span>
             </div>`;
         }).join('');
+
+        let instrHtml = '';
+        const ip = v.instrumentProfile || [];
+        if (ip.length) {
+            const instrRows = ip.map(inst => {
+                const p = (inst.prominence || 'None').toLowerCase();
+                return `
+                <div class="instrument-row">
+                    <span class="instrument-name">${esc(inst.name)}</span>
+                    <span class="instrument-rating ${p}">${esc(inst.prominence || 'None')}</span>
+                </div>`;
+            }).join('');
+
+            instrHtml = `
+            <div class="instrument-section">
+                <div class="dimensions-header">
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="10" width="2.5" height="4"/><rect x="6.75" y="6" width="2.5" height="8"/><rect x="11.5" y="2" width="2.5" height="12"/></svg>
+                    Instrumentation Profile
+                </div>
+                <div class="instrument-table">${instrRows}</div>
+            </div>`;
+        }
 
         let lfmNoteHtml = '';
         if (lfmData && lfmData.some(Boolean)) {
@@ -928,75 +814,52 @@ Return exactly this structure:
                     10-Dimension Analysis
                 </div>
                 <div class="scorecard">${rowsHtml}</div>
+                ${instrHtml}
                 ${lfmNoteHtml}
             </div>`;
     }
 
-    // ── Render preferences ────────────────────────────────────────
+    // ── Render 5 slider preferences ───────────────────────────────
     function renderPreferences() {
-        const groupsHtml = QUESTIONS.map(q => {
-            const optsHtml = q.options.map(o => `
-                <div class="pref-card" data-cat="${q.id}" data-val="${esc(o.val)}" onclick="selectPref(this)">
-                    <span class="pref-emoji">${OPT_ICONS[o.val] || ''}</span>
-                    <span class="pref-txt">${esc(o.val)}</span>
-                    <span class="pref-check">
-                        <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
-                    </span>
-                </div>`).join('');
-
-            return `
-                <div class="pref-group">
-                    <div class="pref-q">
-                        <span class="pref-q-icon">${Q_ICONS[q.id] || ''}</span>
-                        ${q.label}
-                    </div>
-                    <div class="pref-options${q.cols === 3 ? ' cols-3' : ''}">${optsHtml}</div>
-                </div>`;
-        }).join('');
-
-        const dotsHtml = Object.keys(prefs).map(() => `<div class="prog-dot"></div>`).join('');
+        const defaultBg = trackBg(4);
+        const slidersHtml = SLIDERS.map(s => `
+            <div class="slider-group">
+                <div class="slider-group-label">${esc(s.label)}</div>
+                <div class="slider-question">&ldquo;${esc(s.question)}&rdquo;</div>
+                <div class="slider-poles">
+                    <span class="pole-label">${esc(s.left)}</span>
+                    <span class="slider-val" id="val-${s.key}">4</span>
+                    <span class="pole-label right">${esc(s.right)}</span>
+                </div>
+                <input type="range" min="1" max="7" value="4"
+                       id="slider-${s.key}"
+                       style="background:${defaultBg}"
+                       oninput="updateSlider('${s.key}', this.value)">
+            </div>`).join('');
 
         document.getElementById('prefsArea').innerHTML = `
             <div class="card">
                 <div class="prefs-header">
-                    <div class="prefs-title">Refine Your Parameters</div>
-                    <div class="prefs-subtitle">Define how you want to feel right now.</div>
+                    <div class="prefs-title">Calibrate Your Sound</div>
+                    <div class="prefs-subtitle">Set where you sit on each axis right now.</div>
                 </div>
-                ${groupsHtml}
-                <div class="pref-progress" id="progRow">
-                    ${dotsHtml}
-                    <span class="prog-label" id="progLabel">0 of 4 selected</span>
-                </div>
-                <div class="find-wrap" id="findWrap">
-                    <button class="btn-primary" id="findBtn" onclick="findSongs()">
-                        <div class="btn-inner" id="findBtnInner">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                            Find My Tracks
-                        </div>
-                    </button>
-                </div>
+                ${slidersHtml}
+                <button class="btn-primary" id="findBtn" onclick="findSongs()">
+                    <div class="btn-inner" id="findBtnInner">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        Find My Resonance
+                    </div>
+                </button>
             </div>`;
     }
 
-    // ── Preference selection ──────────────────────────────────────
-    function selectPref(el) {
-        const cat = el.dataset.cat;
-        document.querySelectorAll(`.pref-card[data-cat="${cat}"]`).forEach(c => c.classList.remove('selected'));
-        el.classList.add('selected');
-        prefs[cat] = el.dataset.val;
-        updateProgress();
-    }
-
-    function updateProgress() {
-        const filled   = Object.values(prefs).filter(Boolean).length;
-        const total    = Object.keys(prefs).length;
-        const dots     = document.querySelectorAll('.prog-dot');
-        const label    = document.getElementById('progLabel');
-        const findWrap = document.getElementById('findWrap');
-
-        dots.forEach((d, i) => d.classList.toggle('active', i < filled));
-        if (label) label.textContent = filled === total ? 'All parameters set' : `${filled} of ${total} selected`;
-        if (findWrap) findWrap.classList.toggle('show', filled === total);
+    // ── Slider update ─────────────────────────────────────────────
+    function updateSlider(key, val) {
+        sliderPrefs[key] = parseInt(val);
+        const el = document.getElementById('val-' + key);
+        if (el) el.textContent = val;
+        const track = document.getElementById('slider-' + key);
+        if (track) track.style.background = trackBg(parseInt(val));
     }
 
     // ── Step 2: Find songs ────────────────────────────────────────
@@ -1010,16 +873,21 @@ Return exactly this structure:
         inner.innerHTML = '<div class="spinner"></div> Sourcing tracks…';
         document.getElementById('songsArea').innerHTML = '';
 
+        const norm = v => ((v - 4) / 3).toFixed(2);
+
         const dimSummary = (lastVibe.dimensions || []).map(d => {
             const meta = DIMENSION_META.find(m => m.id === d.id);
             return `${meta ? meta.label : d.id}: ${d.value}`;
         }).join('\n');
 
-        const dimNames = DIMENSION_META.map(m => m.label);
+        const instrSummary = (lastVibe.instrumentProfile || [])
+            .filter(i => i.prominence && i.prominence !== 'None')
+            .map(i => `${i.name}: ${i.prominence}`)
+            .join(', ');
 
-        const system = `You are an expert house music curator with deep knowledge of real, existing tracks across all house subgenres. You only recommend real songs that genuinely exist.`;
+        const system = `You are an expert house music curator with encyclopaedic knowledge of real, existing tracks across all house subgenres and scenes worldwide. You only recommend real songs that genuinely exist.`;
 
-        const user = `Based on this listener's full DNA profile (10 dimensions) and their stated preferences right now, recommend exactly 6 real, existing house music tracks.
+        const user = `Based on this listener's full DNA profile and their calibrated preferences, recommend exactly 6 real, existing house music tracks.
 
 Listener DNA — Vibe Name: ${lastVibe.vibeName}
 Subgenres: ${(lastVibe.subgenres||[]).join(', ')}
@@ -1029,26 +897,86 @@ Mood: ${(lastVibe.moodTags||[]).join(', ')}
 10-Dimension Profile:
 ${dimSummary}
 
-Right Now They Want:
-- Mood: ${prefs.mood}
-- Energy: ${prefs.energy}
-- Vocals: ${prefs.vocals}
-- Direction: ${prefs.direction}
+Instrumentation Profile (prominent instruments in their taste):
+${instrSummary || 'Not available'}
+
+Listener Preference Profile (normalised to [-1, +1]):
+- groove_syncopation_preference: ${norm(sliderPrefs.groove)}  (${sliderPrefs.groove}/7 — lower = locked/driving, higher = swung/syncopated)
+- timbre_brightness_preference: ${norm(sliderPrefs.texture)}  (${sliderPrefs.texture}/7 — lower = warm/analog, higher = clean/digital)
+- harmonic_density_preference: ${norm(sliderPrefs.harmonic)}  (${sliderPrefs.harmonic}/7 — lower = hypnotic/minimal, higher = melodic/harmonic)
+- section_contrast_preference: ${norm(sliderPrefs.structural)}  (${sliderPrefs.structural}/7 — lower = steady groove, higher = build/breakdown arc)
+- novelty_tolerance: ${norm(sliderPrefs.discovery)}  (${sliderPrefs.discovery}/7 — lower = trusted artists/labels, higher = unfamiliar discoveries)
+
+CRITICAL INSTRUCTION ON ARTIST SELECTION: You have access to a wide universe of House music artists across all levels of fame and scene depth. Do NOT default to only recommending the top 40-50 most famous house artists. Actively include lesser-known, underground, emerging, and niche artists that perfectly fit the sonic profile. A precise recommendation of an underground artist is more valuable than a safe famous name.
+
+Draw recommendations from ALL of these artist tiers and scenes:
+
+MUST-INCLUDE PRIORITY ARTISTS (always consider first):
+Grigoré, Moojo, PAWSA, Soda State, The Bausa, Serve Cold
+
+CURRENT CHART LEADERS (Beatport/Traxsource 2025):
+&friends, &ME, 3DDY, Abel Balder, Across Boundaries, Adam Port, ANOTR, Anyma, Argy, ARTBAT, Boys Noize, Carl Bee, Cassian, Chloé Caillet, Chris Lake, Chris Lorenzo, Chris Stussy, CID, Cloonee, Crusy, David Penn, Daecolm
+
+AFRO / ORGANIC / GLOBAL HOUSE:
+Aaaron, Acid Pauli, Aero Manyelo, Afefe Iku, Antdot, Argento Dust, Atjazz, Atmos Blaq, Be Svendsen, Black Motion, Boddhi Satva, Caiiro, Carlita, Chaim, Dafro, Djuma Soundsystem, Doug Gomez, Gioli & Assia, Husa & Zeyada, Kerala Dust, Kitty Amor, Moojo, Niqi, Nitefreak, Oscar L, Quelza, Rancido, Themba, Toshi
+
+TECH HOUSE / MINIMAL / DEEP TECH:
+AC Slater, Ada Kaleh, Andrea Oliva, Apollonia, Archie Hamilton, Audiojack, Baby Ford, Barac, Biscits, Butch, Claude VonStroke, Cristi Cons, Cuartero, De La Swing, Dennis Cruz, Detlef, Dubfire, Edu Imbernon, Enrico Sangiuliano, Fisher, Hot Since 82, Ilario Alicante, Ingi Visions, Jamie Jones, Joseph Capriati, Loco Dice, Miss Kittin, Nicole Moudaber, Pablo Cres, Pan-Pot, Patrick Topping, Richie Hawtin, Sirus Hood, Skream, Solid Grooves artists
+
+MELODIC / PROGRESSIVE HOUSE:
+Adriatique, Agents Of Time, Ame, Ben Böhmer, Bicep, Bob Moses, Caribou, Christian Löffler, Colyn, Cubicolor, Damon Jee, Daphni, Dixon, DJ Koze, Fabricio Pecanha, Fort Romeau, Fred again.., Guy Gerber, Hernan Cattaneo, Jan Blomqvist, John Talabot, Kidnap, Lane 8, Luttrell, Maceo Plex, Monolink, NTO, Patrice Bäumel, Peggy Gou, Recondite, Stephan Bodzin, Tale Of Us, Worakls
+
+CLASSIC / DEEP / SOULFUL HOUSE:
+4hero, Adeva, Adonis, Alan Braxe, Andres, Cajmere, Carl Craig, CeCe Peniston, Charles Webster, Chez Damier, Crystal Waters, Daft Punk, Danny Tenaglia, Dave Lee, David Morales, Dennis Ferrer, Derrick Carter, Derrick May, Dimitri From Paris, Frankie Knuckles, Honey Dijon, Kerri Chandler, Larry Heard, Larry Levan, Louie Vega, Marshall Jefferson, Masters At Work, Mr. Fingers, Ron Hardy, Ron Trent
+
+UK GARAGE / BASSLINE / UK HOUSE:
+Artful Dodger, Ben UFO, Benga, Craig David, DJ EZ, DJ Q, DJ Zinc, Ejeca, Eliza Rose, Flava D, Geeneus, Groove Chronicles, Joy Orbison, Julio Bashmore, LF System, Nia Archives, Objekt, Pearson Sound, Plastician, Sherelle
+
+LO-FI / LEFTFIELD / UNDERGROUND HOUSE:
+AceMo, AceMoMa, Against All Logic, Anthony Naples, Avalon Emerson, Axel Boman, Call Super, Ciel, D. Tiffany, DJ Sprinkles, Eris Drew, Fort Romeau, Francis Inferno Orchestra, HAAi, Huerco S., Iron Curtis, Jacques Greene, Jlin, Lone, Move D, Nick Leon, Oil Gang, Octo Octa, Palms Trax, Perko, Powder, Shed, Shackleton, Surgeon
+
+CHICAGO / ACID / JACKIN HOUSE:
+808 State, A Guy Called Gerald, Acid Mondays, Armando, Chrissy, DJ Assault, DJ Earl, DJ Funk, DJ Rashad, DJ Rush, Gant-Man, Hardfloor, Inland Knights, Jamie Principle, Larry Heard, Ron Hardy, Ten City, Trax Records artists
+
+DISCO / NU-DISCO / BALEARIC:
+Aeroplane, Andrew Weatherall, Antal, Breakbot, Cerrone, Chaos In The CBD, Classixx, COEO, Crackazat, Dam Swindle, Dan Shake, Detroit Swindle, DJ Harvey, Eli Escobar, Erol Alkan, Flight Facilities, Folamour, Honey Dijon, Kraak & Smaak, Latmun, Louie Vega, Motor City Drum Ensemble, Prins Thomas, Running Back artists
+
+SOUTH AFRICAN / AMAPIANO:
+Aymos, Black Coffee, Culoe De Song, Da Capo, DJ Stokie, Dlala Thukzin, Heavy K, Hyenah, Mas Musiq, Master KG, Musa Keys, Nkosazana Daughter, Prince Kaybee, Themba, Young Stunna
+
+EMERGING / NICHE RADAR:
+Barry Can't Swim, Duke & Jones, Eliza Rose, Franky Wah, HoneyLuv, Kettama, LF System, Logic1000, Nia Archives, Niteplan, NTO, Shezar, Vtss
+
+LATIN / TRIBAL / BRAZILIAN:
+Alok, Behrouz, Boris Dlugosch, Cevin Fisher, Deep Dish, DJ Chus, Nicola Cruz, Thornato
+
+WOMEN / QUEER / COMMUNITY-LED:
+Avalon Emerson, Cassy, Ciel, D. Tiffany, DJ Holographic, DJ Lady D, DJ Sprinkles, Ela Minus, Eris Drew, HAAi, Honey Dijon, Jlin, Kampire, Miss Kittin, Nia Archives, Octo Octa, Sherelle, Sofia Kourtesis, UNIIQU3
+
+When recommending, aim for a MIX of: 2-3 tracks from well-known artists, 2-3 from mid-tier scene artists, 1-2 from genuinely underground or emerging artists.
+
+HOUSE SUBGENRE TAXONOMY — recommend from across this full spectrum:
+Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, 3-step, Soulful House, Vocal House, Garage House, UK Garage, Bassline House, Speed Garage, UK Funky, Acid House, Jackin House, Ghetto House, Juke/Footwork, Lo-Fi House, Leftfield House, Minimal House, Microhouse, Nu-Disco House, Filter House, French House, Balearic House, Disco House, Latin House, Brazilian House, Indie Dance, Ambient House, Broken Beat-adjacent, Detroit House, NYC House, New Jersey House, Ibiza lineage, Rave-adjacent, Outsider House, Experimental House, South African House, Gqom-adjacent, Rominimal, Deep Tech.
+
+Each recommendation must state which specific subgenre it belongs to.
 
 Return ONLY a valid JSON array of exactly 6 objects. Every track must be real and verifiable.
-For dimensionMatches, pick 2-3 of the most relevant dimension labels from this list: ${dimNames.join(', ')}.
 
 [
   {
     "title": "Exact Song Title",
     "artist": "Artist Name",
-    "why": "Two sentences: first connects to specific dimensions of their DNA profile, second explains how it matches their current mood and energy preferences.",
-    "dimensionMatches": ["Dimension Label 1", "Dimension Label 2"]
+    "subgenre": "Specific House subgenre from the taxonomy above",
+    "sceneEra": "One-line scene/era context (e.g. 'Berlin 2015–2020, Diynamic label sound')",
+    "instrumentMatch": "Comma-separated prominent instruments in this track that match the listener's taste",
+    "prefMatches": ["one or more of: Groove Architecture, Production Texture, Harmonic Depth, Structural Payoff, Discovery Mode"],
+    "why": "Two sentences: first connects to specific dimensions of their DNA profile, second explains how it matches their calibrated preference settings.",
+    "dimensionMatches": ["one or two of the 10 dimension labels that best match"]
   }
 ]`;
 
         try {
-            const raw   = await callAPI(system, user, 2500);
+            const raw   = await callAPI(system, user, 3000);
             const songs = parseJSON(raw);
             if (!Array.isArray(songs)) throw new Error('Unexpected response format.');
             renderSongs(songs);
@@ -1056,24 +984,36 @@ For dimensionMatches, pick 2-3 of the most relevant dimension labels from this l
             document.getElementById('songsArea').innerHTML = `<div class="card"><div class="error">${esc(err.message)}</div></div>`;
         } finally {
             btn.disabled = false;
-            inner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Find My Tracks`;
+            inner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Find My Resonance`;
         }
     }
 
     // ── Render songs ──────────────────────────────────────────────
     function renderSongs(songs) {
-        const prefs_summary = [prefs.mood, prefs.energy, prefs.vocals, prefs.direction].filter(Boolean).join(' · ');
+        const sliderSummary = `Groove ${sliderPrefs.groove} · Texture ${sliderPrefs.texture} · Harmonic ${sliderPrefs.harmonic} · Structure ${sliderPrefs.structural} · Discovery ${sliderPrefs.discovery}`;
 
         const cardsHtml = songs.slice(0, 6).map((s, i) => {
-            const dimTagsHtml = (s.dimensionMatches || []).map(d => `<span class="dim-match-tag">${esc(d)}</span>`).join('');
+            const prefTagsHtml = (s.prefMatches || [])
+                .map(p => `<span class="pref-match-tag">${esc(p)}</span>`).join('');
 
             return `
             <div class="song-card">
                 <div class="song-num">Track ${String(i+1).padStart(2,'0')}</div>
                 <div class="song-title">${esc(s.title)}</div>
                 <div class="song-artist">${esc(s.artist)}</div>
+                ${s.subgenre ? `<div class="song-subgenre">${esc(s.subgenre)}</div>` : ''}
+                ${s.sceneEra ? `<div class="song-scene">${esc(s.sceneEra)}</div>` : ''}
+                ${s.instrumentMatch ? `
+                <div class="song-meta-row">
+                    <span class="song-meta-label">Instruments</span>
+                    <span>${esc(s.instrumentMatch)}</span>
+                </div>` : ''}
+                ${prefTagsHtml ? `
+                <div class="song-meta-row" style="margin-bottom:12px">
+                    <span class="song-meta-label">Pref Match</span>
+                    <div class="pref-matches">${prefTagsHtml}</div>
+                </div>` : ''}
                 <div class="song-why">${esc(s.why)}</div>
-                ${dimTagsHtml ? `<div class="dim-matches">${dimTagsHtml}</div>` : ''}
                 <div class="song-links">
                     <a class="link-btn link-yt" href="${searchUrl('yt', s.artist, s.title)}" target="_blank" rel="noopener">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -1091,7 +1031,7 @@ For dimensionMatches, pick 2-3 of the most relevant dimension labels from this l
             <div class="card">
                 <div class="songs-header">
                     <div class="songs-title">Curated Playlist</div>
-                    <div class="songs-subtitle">6 tracks sourced for &nbsp;<strong style="color:var(--accent)">${esc(prefs_summary)}</strong></div>
+                    <div class="songs-subtitle">6 tracks matched to &nbsp;<strong style="color:var(--accent)">${esc(sliderSummary)}</strong></div>
                 </div>
                 <div class="song-cards">${cardsHtml}</div>
             </div>`;

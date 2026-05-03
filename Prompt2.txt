@@ -1,12 +1,65 @@
-Replace the current 4 preference questions with these 5 new ones, displayed as elegant 1-7 slider scales (not buttons). Each slider goes from left pole to right pole with a label on each end and the current value shown. The questions are:
+Read CLAUDE.md first for full project context. Then make these two upgrades to index.html:
 
-Groove Architecture — Left: "Locked / driving / precise" → Right: "Swung / syncopated / percussive"
-Production Texture — Left: "Warm / raw / organic / analog" → Right: "Clean / bright / polished / surgical"
-Harmonic Depth — Left: "Hypnotic / minimal / repetitive" → Right: "Melodic / harmonic / emotionally lifted"
-Structural Payoff — Left: "Steady groove throughout" → Right: "Strong build / breakdown / release arc"
-Discovery Mode — Left: "Trusted artist / label / scene" → Right: "Unfamiliar but sonically right"
-Give some explanation (one-liner) on what the above mean
+UPGRADE A — INSTRUMENT ANALYSIS
+Add an 11th analysis dimension called "Instrumentation Profile". In the Claude analysis prompt, instruct Claude to identify and rate the prominence of these instruments across the 5 songs on a scale of None / Low / Medium / High:
+- Kick drum & sub bass
+- Hi-hats, cymbals & percussion
+- Bassline (melodic bass)
+- Synthesizer pads & chords
+- Piano & keys
+- Organic percussion (congas, bongos, shakers, djembe)
+- Strings & orchestral elements
+- Vocals (lead & backing)
+- Guitar (acoustic or electric)
+- Trumpet, brass & wind instruments
+- Flute & woodwind
+- Marimba & mallet instruments
 
+Display this as a clean instrument prominence table in the analysis output. Style: thin rows, instrument name left-aligned, prominence rating right-aligned in gold #C9A84C. This instrument profile must also be passed to the recommendation prompt so recommended songs match the instrument character.
 
-Also add instrument analysis to the Claude prompt. When analysing each song, Claude must also identify and rate the prominence (Low/Medium/High) of these instruments: Kick drum, Hi-hats/cymbals, Bassline, Synthesizer pads, Piano/Keys, Percussion (congas/bongos/shakers), Strings, Vocals, Guitar, Trumpet/brass. Show this as a clean instrument prominence table in the analysis output.
-Pass all 5 slider values (normalised as -1 to +1) to the recommendation Claude prompt so recommendations account for groove, texture, harmony, structure and discovery preferences.
+UPGRADE B — REPLACE PREFERENCE QUESTIONS WITH 5 SLIDERS
+Remove the current 4 button-based preference questions entirely. Replace with 5 elegant slider questions styled to match the premium dark UI (#0A0A0F background, gold #C9A84C accent, white text). Each slider:
+- Ranges from 1 to 7
+- Has a left pole label and right pole label
+- Shows the current numeric value
+- Has a one-line question above it
+- Is styled as a thin horizontal track with a gold thumb indicator
+
+The 5 questions are:
+
+1. GROOVE ARCHITECTURE
+Question: "When a house record really works for you, what does the groove feel like?"
+Left pole (1): "Locked / straight / driving / relentless"
+Right pole (7): "Swung / syncopated / percussive / breathing"
+
+2. PRODUCTION TEXTURE
+Question: "What production finish draws you in most?"
+Left pole (1): "Warm / dusty / analog / raw / organic"
+Right pole (7): "Clean / bright / polished / surgical / digital"
+
+3. HARMONIC DEPTH
+Question: "What do you want the music to do to you?"
+Left pole (1): "Hypnotize through repetition and restraint"
+Right pole (7): "Move me through chords, melody and emotional lift"
+
+4. STRUCTURAL PAYOFF
+Question: "Across a long house track, what do you value most?"
+Left pole (1): "Unwavering groove — stays in the pocket throughout"
+Right pole (7): "A journey — builds, breakdowns, tension and release"
+
+5. DISCOVERY MODE
+Question: "If two records fit your sonic lane equally, which do you choose?"
+Left pole (1): "Trusted artist / label / scene I already know"
+Right pole (7): "Unfamiliar corner of house that stretches me a bit"
+
+After all 5 sliders are set, show a "Find My Resonance" button (renamed from "Find My Songs").
+
+Normalise each slider value to [-1, +1] using formula: (value - 4) / 3
+Pass all 5 normalised values to the recommendation Claude prompt with these labels:
+- groove_syncopation_preference
+- timbre_brightness_preference
+- harmonic_density_preference
+- section_contrast_preference
+- novelty_tolerance
+
+The recommendation prompt must explicitly use these 5 values to filter and rank songs.

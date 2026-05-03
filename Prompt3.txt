@@ -1,4 +1,72 @@
-Upgrade the recommendation system with two major improvements:
-1. Full House subgenre taxonomy — The Claude recommendation prompt must now recognise and recommend from ALL of these House subgenres, not just the top ones: Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, 3-step, Soulful House, Vocal House, Garage House, UK Garage, Bassline House, Speed Garage, UK Funky, Acid House, Jackin House, Ghetto House, Lo-Fi House, Leftfield House, Minimal House, Microhouse, Nu-Disco House, Filter House, French House, Balearic House, Disco House, Latin House, Brazilian House, Indie Dance, Ambient House, Broken Beat-adjacent, Detroit House, NYC House, New Jersey House, Ibiza lineage, Rave-adjacent, Outsider House.
-2. Wide artist universe — When recommending songs, explicitly instruct Claude to draw from ALL tiers of artists including emerging and underground artists, not just famous names. Include artists from these scene categories: Current Beatport/Traxsource chart leaders, Core underground scene artists, Afro/organic/global house niche, Tech-house minimal deep-tech underground, Melodic progressive cinematic house, UK garage bassline club scene, Lo-fi leftfield outsider experimental, Latin tribal Brazilian house, Classic foundational house canon, Women/queer/community-led house artists, Emerging niche radar artists. Tell Claude: "Do NOT default to the top 40-50 most famous house artists. Actively recommend lesser-known and emerging artists that fit the sonic profile. A recommendation of an unknown artist that perfectly fits the vibe is more valuable than a safe famous name."
-Also instruct Claude that each recommendation must specify: which House subgenre it belongs to, which instruments are prominent, and which of the 5 preference dimensions it matches.
+Read CLAUDE.md first for full project context. Then make these upgrades to index.html:
+
+UPGRADE — FULL SUBGENRE TAXONOMY + FULL ARTIST UNIVERSE
+
+Update the Claude recommendation prompt to include ALL of the following:
+
+PART 1 — COMPLETE HOUSE SUBGENRE TAXONOMY
+The recommendation prompt must explicitly recognise and recommend from ALL these House subgenres:
+Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, 3-step, Soulful House, Vocal House, Garage House, UK Garage, Bassline House, Speed Garage, UK Funky, Acid House, Jackin House, Ghetto House, Juke/Footwork, Lo-Fi House, Leftfield House, Minimal House, Microhouse, Nu-Disco House, Filter House, French House, Balearic House, Disco House, Latin House, Brazilian House, Indie Dance, Ambient House, Broken Beat-adjacent, Detroit House, NYC House, New Jersey House, Ibiza lineage, Rave-adjacent, Outsider House, Experimental House, South African House, Gqom-adjacent, Rominimal, Deep Tech.
+
+Each recommendation must state which specific subgenre it belongs to.
+
+PART 2 — FULL ARTIST UNIVERSE (3,037 artists across all tiers)
+The recommendation prompt must instruct Claude with this exact text:
+
+"CRITICAL INSTRUCTION ON ARTIST SELECTION: You have access to a wide universe of House music artists across all levels of fame and scene depth. Do NOT default to only recommending the top 40-50 most famous house artists. Actively include lesser-known, underground, emerging, and niche artists that perfectly fit the sonic profile. A precise recommendation of an underground artist is more valuable than a safe famous name.
+
+Draw recommendations from ALL of these artist tiers and scenes:
+
+MUST-INCLUDE PRIORITY ARTISTS (always consider first):
+Grigoré, Moojo, PAWSA, Soda State, The Bausa, Serve Cold
+
+CURRENT CHART LEADERS (Beatport/Traxsource 2025):
+&friends, &ME, 3DDY, Abel Balder, Across Boundaries, Adam Port, ANOTR, Anyma, Argy, ARTBAT, Boys Noize, Carl Bee, Cassian, Chloé Caillet, Chris Lake, Chris Lorenzo, Chris Stussy, CID, Cloonee, Crusy, David Penn, Daecolm
+
+AFRO / ORGANIC / GLOBAL HOUSE:
+Aaaron, Acid Pauli, Aero Manyelo, Afefe Iku, Antdot, Argento Dust, Atjazz, Atmos Blaq, Be Svendsen, Black Motion, Boddhi Satva, Caiiro, Carlita, Chaim, Dafro, Djuma Soundsystem, Doug Gomez, Gioli & Assia, Husa & Zeyada, Kerala Dust, Kitty Amor, Moojo, Niqi, Nitefreak, Oscar L, Quelza, Rancido, Themba, Toshi
+
+TECH HOUSE / MINIMAL / DEEP TECH:
+AC Slater, Ada Kaleh, Andrea Oliva, Apollonia, Archie Hamilton, Audiojack, Baby Ford, Barac, Biscits, Butch, Claude VonStroke, Cristi Cons, Cuartero, De La Swing, Dennis Cruz, Detlef, Dubfire, Edu Imbernon, Enrico Sangiuliano, Fisher, Hot Since 82, Ilario Alicante, Ingi Visions, Jamie Jones, Joseph Capriati, Loco Dice, Miss Kittin, Nicole Moudaber, Pablo Cres, Pan-Pot, Patrick Topping, Richie Hawtin, Sirus Hood, Skream, Solid Grooves artists
+
+MELODIC / PROGRESSIVE HOUSE:
+Adriatique, Agents Of Time, Ame, Ben Böhmer, Bicep, Bob Moses, Caribou, Christian Löffler, Colyn, Cubicolor, Damon Jee, Daphni, Dixon, DJ Koze, Fabricio Pecanha, Fort Romeau, Fred again.., Guy Gerber, Hernan Cattaneo, Jan Blomqvist, John Talabot, Kidnap, Lane 8, Luttrell, Maceo Plex, Monolink, NTO, Patrice Bäumel, Peggy Gou, Recondite, Stephan Bodzin, Tale Of Us, Worakls
+
+CLASSIC / DEEP / SOULFUL HOUSE:
+4hero, Adeva, Adonis, Alan Braxe, Andres, Cajmere, Carl Craig, CeCe Peniston, Charles Webster, Chez Damier, Crystal Waters, Daft Punk, Danny Tenaglia, Dave Lee, David Morales, Dennis Ferrer, Derrick Carter, Derrick May, Dimitri From Paris, Frankie Knuckles, Honey Dijon, Kerri Chandler, Larry Heard, Larry Levan, Louie Vega, Marshall Jefferson, Masters At Work, Mr. Fingers, Ron Hardy, Ron Trent, Stevie Wonder-influenced artists
+
+UK GARAGE / BASSLINE / UK HOUSE:
+Artful Dodger, Ben UFO, Benga, Craig David, DJ EZ, DJ Q, DJ Zinc, Ejeca, Eliza Rose, Flava D, Geeneus, Groove Chronicles, Joy Orbison, Julio Bashmore, LF System, Nia Archives, Objekt, Pearson Sound, Plastician, Sherelle
+
+LO-FI / LEFTFIELD / UNDERGROUND HOUSE:
+AceMo, AceMoMa, Against All Logic, Anthony Naples, Avalon Emerson, Axel Boman, Call Super, Ciel, D. Tiffany, DJ Sprinkles, Eris Drew, Fort Romeau, Francis Inferno Orchestra, HAAi, Huerco S., Iron Curtis, Jacques Greene, Jlin, Lone, Move D, Nick Leon, Oil Gang, Octo Octa, Palms Trax, Perko, Powder, Shed, Shackleton, Surgeon
+
+CHICAGO / ACID / JACKIN HOUSE:
+808 State, A Guy Called Gerald, Acid Mondays, Armando, Chrissy, DJ Assault, DJ Earl, DJ Funk, DJ Rashad, DJ Rush, Gant-Man, Hardfloor, Inland Knights, Jamie Principle, Larry Heard, Ron Hardy, Ten City, Trax Records artists
+
+DISCO / NU-DISCO / BALEARIC:
+Aeroplane, Andrew Weatherall, Antal, Breakbot, Cerrone, Chaos In The CBD, Classixx, COEO, Crackazat, Dam Swindle, Dan Shake, Detroit Swindle, DJ Harvey, Eli Escobar, Erol Alkan, Flight Facilities, Folamour, Honey Dijon, Kraak & Smaak, Latmun, Louie Vega, Motor City Drum Ensemble, Prins Thomas, running back artists
+
+SOUTH AFRICAN / AMAPIANO:
+Aymos, Black Coffee, Culoe De Song, Da Capo, DJ Stokie, Dlala Thukzin, Heavy K, Hyenah, Mas Musiq, Master KG, Musa Keys, Nkosazana Daughter, Prince Kaybee, Themba, Young Stunna
+
+EMERGING / NICHE RADAR:
+Barry Can't Swim, Duke & Jones, Eliza Rose, Franky Wah, HoneyLuv, Kettama, LF System, Logic1000, Nia Archives, Niteplan, NTO, Shezar, Vtss
+
+LATIN / TRIBAL / BRAZILIAN:
+Alok, Behrouz, Boris Dlugosch, Cevin Fisher, Deep Dish, DJ Chus, Nicola Cruz, Thornato
+
+WOMEN / QUEER / COMMUNITY-LED:
+Avalon Emerson, Cassy, Ciel, D. Tiffany, DJ Holographic, DJ Lady D, DJ Sprinkles, Ela Minus, Eris Drew, HAAi, Honey Dijon, Jlin, Kampire, Miss Kittin, Nia Archives, Octo Octa, Sherelle, Sofia Kourtesis, UNIIQU3
+
+When recommending, aim for a MIX of: 2-3 tracks from well-known artists, 2-3 from mid-tier scene artists, 1-2 from genuinely underground or emerging artists. This makes the recommendation set more valuable and interesting than a list of only famous names."
+
+PART 3 — EACH RECOMMENDATION CARD MUST SHOW:
+1. Track title and artist name
+2. House subgenre
+3. Scene/era context (1 line)
+4. Instrument profile match (which instruments are prominent — matches user's analysed taste)
+5. Which of the 5 preference dimensions it matches (groove, texture, harmony, structure, discovery)
+6. Why it fits this specific user's Vibe DNA (2 sentences)
+7. YouTube search link
+8. Spotify search link
