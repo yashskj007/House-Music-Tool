@@ -130,6 +130,13 @@
         }
         .save-badge.show { opacity: 1; }
 
+        .badge-optional {
+            margin-left: auto; font-size: 9px; font-weight: 600;
+            padding: 2px 7px; border-radius: 6px;
+            background: rgba(0,212,189,0.1); border: 1px solid rgba(0,212,189,0.2);
+            color: var(--teal); letter-spacing: 0.5px; text-transform: uppercase;
+        }
+
         input[type="password"], textarea {
             width: 100%;
             background: rgba(255,255,255,0.035);
@@ -388,7 +395,6 @@
 
         .pref-card.selected .pref-check { opacity: 1; transform: scale(1); }
 
-        /* progress dots */
         .pref-progress {
             display: flex; align-items: center; justify-content: center; gap: 8px;
             margin-bottom: 18px; min-height: 22px;
@@ -409,7 +415,6 @@
             margin-left: 4px;
         }
 
-        /* Find My Songs button reveal */
         .find-wrap {
             overflow: hidden; max-height: 0; opacity: 0;
             transition: max-height 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease;
@@ -417,6 +422,89 @@
         }
 
         .find-wrap.show { max-height: 90px; opacity: 1; }
+
+        /* ── Vibe DNA Summary ── */
+        .dna-summary-card {
+            background: linear-gradient(135deg, rgba(155,93,229,0.1), rgba(0,212,189,0.06));
+            border: 1px solid rgba(155,93,229,0.3);
+            border-radius: 20px; padding: 24px 26px; margin-bottom: 28px;
+            position: relative; overflow: hidden;
+        }
+
+        .dna-summary-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(199,125,255,0.6), rgba(103,232,249,0.4), transparent);
+        }
+
+        .dna-summary-label {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 2.5px; color: var(--purple-light); margin-bottom: 12px;
+        }
+
+        .dna-summary-label svg { flex-shrink: 0; }
+
+        .dna-summary-text {
+            font-size: 14.5px; line-height: 1.75;
+            color: rgba(232,232,240,0.85);
+            font-style: italic;
+        }
+
+        /* ── 10 Dimensions Grid ── */
+        .dimensions-header {
+            font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 2.5px; color: var(--teal-light); margin-bottom: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .dna-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 10px; margin-bottom: 6px;
+        }
+
+        .dna-card {
+            background: rgba(255,255,255,0.025); border: 1px solid var(--border);
+            border-radius: 16px; padding: 16px 16px 14px;
+            transition: background 0.2s, border-color 0.2s;
+            animation: fadeUp 0.45s cubic-bezier(0.16,1,0.3,1) both;
+        }
+
+        .dna-card:hover { background: rgba(155,93,229,0.05); border-color: rgba(155,93,229,0.2); }
+
+        .dna-card:nth-child(1)  { animation-delay: 0.03s; }
+        .dna-card:nth-child(2)  { animation-delay: 0.06s; }
+        .dna-card:nth-child(3)  { animation-delay: 0.09s; }
+        .dna-card:nth-child(4)  { animation-delay: 0.12s; }
+        .dna-card:nth-child(5)  { animation-delay: 0.15s; }
+        .dna-card:nth-child(6)  { animation-delay: 0.18s; }
+        .dna-card:nth-child(7)  { animation-delay: 0.21s; }
+        .dna-card:nth-child(8)  { animation-delay: 0.24s; }
+        .dna-card:nth-child(9)  { animation-delay: 0.27s; }
+        .dna-card:nth-child(10) { animation-delay: 0.30s; }
+
+        .dna-card-top {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+        }
+
+        .dna-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
+
+        .dna-label {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.8px; color: var(--muted); line-height: 1.2;
+        }
+
+        .dna-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px; font-weight: 700; line-height: 1.3;
+            background: linear-gradient(135deg, var(--purple-light), var(--teal-light));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            margin-bottom: 5px;
+        }
+
+        .dna-detail {
+            font-size: 11.5px; line-height: 1.55; color: rgba(232,232,240,0.5);
+        }
 
         /* ── Song recommendation cards ── */
         .songs-header {
@@ -473,7 +561,24 @@
 
         .song-why {
             font-size: 13.5px; line-height: 1.65;
-            color: rgba(232,232,240,0.65); margin-bottom: 16px;
+            color: rgba(232,232,240,0.65); margin-bottom: 14px;
+        }
+
+        /* ── Dimension match tags on song cards ── */
+        .dim-matches {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+        }
+
+        .dim-match-tag {
+            padding: 3px 10px; border-radius: 100px;
+            font-size: 10.5px; font-weight: 600; letter-spacing: 0.2px;
+            background: rgba(155,93,229,0.1); border: 1px solid rgba(155,93,229,0.22);
+            color: var(--purple-light);
+        }
+
+        .dim-match-tag:nth-child(even) {
+            background: rgba(0,212,189,0.08); border-color: rgba(0,212,189,0.2);
+            color: var(--teal-light);
         }
 
         .song-links { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -501,6 +606,17 @@
         }
 
         .link-sp:hover { background: rgba(30,215,96,0.16); border-color: rgba(30,215,96,0.35); }
+
+        /* ── Lastfm note ── */
+        .lfm-note {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 10px; color: var(--muted); margin-top: 6px;
+        }
+
+        @media (max-width: 480px) {
+            .dna-grid { grid-template-columns: 1fr; }
+            .stats { grid-template-columns: repeat(3, 1fr); }
+        }
     </style>
 </head>
 <body>
@@ -512,7 +628,7 @@
             <span class="logo-wordmark">Vibe Check</span>
         </div>
         <h1>House Music<br>DNA Analyser</h1>
-        <p class="subtitle">Drop 5 tracks &mdash; we'll decode your sonic identity.</p>
+        <p class="subtitle">Drop 5 tracks &mdash; we'll decode your sonic identity across 10 dimensions.</p>
     </header>
 
     <!-- ── Step 1: Input card ── -->
@@ -527,6 +643,19 @@
             <div class="hint">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.45"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg>
                 Stored only in your browser's localStorage — never logged or forwarded.
+            </div>
+        </div>
+
+        <div class="field">
+            <label>
+                <span class="dot"></span>
+                Last.fm API Key
+                <span class="badge-optional">Optional</span>
+            </label>
+            <input type="password" id="lastfmKey" placeholder="Your Last.fm API key…" autocomplete="off" spellcheck="false">
+            <div class="hint">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.45"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg>
+                Free at last.fm/api &nbsp;·&nbsp; Powers real listener counts &amp; Cultural/Scene dimensions.
             </div>
         </div>
 
@@ -554,6 +683,9 @@
 
         <div id="resultsArea"></div>
     </div>
+
+    <!-- ── Step 1.5: Vibe DNA breakdown (injected) ── -->
+    <div id="dnaArea"></div>
 
     <!-- ── Step 2: Preferences card (injected) ── -->
     <div id="prefsArea"></div>
@@ -610,17 +742,38 @@
         },
     ];
 
-    // ── Persist API key ────────────────────────────────────────────
-    const apiKeyEl  = document.getElementById('apiKey');
-    const saveBadge = document.getElementById('saveBadge');
-    const saved = localStorage.getItem('anthropic_api_key');
-    if (saved) apiKeyEl.value = saved;
+    const DIMENSION_META = [
+        { id: 'tempo',       icon: '⏱️',  label: 'Tempo & Rhythm DNA'        },
+        { id: 'harmonic',    icon: '🎹',  label: 'Harmonic Palette'           },
+        { id: 'texture',     icon: '🌊',  label: 'Textural Layers'            },
+        { id: 'emotional',   icon: '🎭',  label: 'Emotional Arc'              },
+        { id: 'vocal',       icon: '🎤',  label: 'Vocal Character'            },
+        { id: 'production',  icon: '🔧',  label: 'Production Era & Design'    },
+        { id: 'geographic',  icon: '🌍',  label: 'Geographic & Cultural DNA'  },
+        { id: 'scene',       icon: '🎪',  label: 'Cultural & Scene Position'  },
+        { id: 'listener',    icon: '👥',  label: 'Listener Profile'           },
+        { id: 'dancefloor',  icon: '💃',  label: 'Dancefloor Function'        },
+    ];
+
+    // ── Persist API keys ───────────────────────────────────────────
+    const apiKeyEl   = document.getElementById('apiKey');
+    const lastfmEl   = document.getElementById('lastfmKey');
+    const saveBadge  = document.getElementById('saveBadge');
+
+    const savedAnth  = localStorage.getItem('anthropic_api_key');
+    const savedLfm   = localStorage.getItem('lastfm_api_key');
+    if (savedAnth) apiKeyEl.value  = savedAnth;
+    if (savedLfm)  lastfmEl.value  = savedLfm;
 
     apiKeyEl.addEventListener('input', () => {
         localStorage.setItem('anthropic_api_key', apiKeyEl.value);
         saveBadge.classList.add('show');
         clearTimeout(apiKeyEl._t);
         apiKeyEl._t = setTimeout(() => saveBadge.classList.remove('show'), 2200);
+    });
+
+    lastfmEl.addEventListener('input', () => {
+        localStorage.setItem('lastfm_api_key', lastfmEl.value);
     });
 
     // ── Helpers ────────────────────────────────────────────────────
@@ -634,13 +787,12 @@
 
     function searchUrl(platform, artist, title) {
         const q = `${artist} ${title}`;
-        if (platform === 'yt') {
+        if (platform === 'yt')
             return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q).replace(/%20/g, '+');
-        }
         return 'https://open.spotify.com/search/' + encodeURIComponent(q);
     }
 
-    async function callAPI(systemPrompt, userPrompt) {
+    async function callAPI(systemPrompt, userPrompt, maxTokens = 1400) {
         const apiKey = apiKeyEl.value.trim();
         if (!apiKey) throw new Error('Please enter your Anthropic API key.');
 
@@ -655,7 +807,7 @@
             },
             body: JSON.stringify({
                 model: 'claude-sonnet-4-6',
-                max_tokens: 1400,
+                max_tokens: maxTokens,
                 system: systemPrompt,
                 messages: [{ role: 'user', content: userPrompt }]
             })
@@ -677,6 +829,47 @@
         throw new Error('Could not parse response. Please try again.');
     }
 
+    // ── Last.fm data fetch ─────────────────────────────────────────
+    async function fetchLastFmTrack(apiKey, artist, title) {
+        try {
+            const url = `https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${encodeURIComponent(apiKey)}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&format=json&autocorrect=1`;
+            const res = await fetch(url);
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (data.error || !data.track) return null;
+            const t = data.track;
+            return {
+                artist:    t.artist?.name ?? artist,
+                title:     t.name ?? title,
+                listeners: parseInt(t.listeners ?? '0', 10),
+                playcount: parseInt(t.playcount ?? '0', 10),
+                tags:      (t.toptags?.tag ?? []).slice(0, 5).map(x => x.name),
+            };
+        } catch { return null; }
+    }
+
+    async function fetchLastFmData(tracks) {
+        const lfmKey = lastfmEl.value.trim();
+        if (!lfmKey) return null;
+
+        const results = await Promise.all(
+            tracks.map(({ artist, title }) => fetchLastFmTrack(lfmKey, artist, title))
+        );
+        return results;
+    }
+
+    // ── Parse "Artist - Title" lines ──────────────────────────────
+    function parseTracks(rawText) {
+        return rawText.split('\n')
+            .map(l => l.trim())
+            .filter(Boolean)
+            .map(l => {
+                const idx = l.indexOf(' - ');
+                if (idx === -1) return { artist: l, title: '' };
+                return { artist: l.slice(0, idx).trim(), title: l.slice(idx + 3).trim() };
+            });
+    }
+
     // ── Step 1: Analyse vibe ───────────────────────────────────────
     async function analyseVibe() {
         const rawText = document.getElementById('songs').value.trim();
@@ -688,8 +881,8 @@
             return;
         }
 
-        const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
-        if (!lines.length) {
+        const tracks = parseTracks(rawText);
+        if (!tracks.length) {
             results.innerHTML = '<div class="error">⚠️ Please enter at least one track in the format <em>Artist - Song Title</em>.</div>';
             return;
         }
@@ -697,24 +890,90 @@
         btn.disabled = true;
         document.getElementById('btnInner').innerHTML = '<div class="spinner"></div> Analysing your vibe…';
         results.innerHTML = '';
+        document.getElementById('dnaArea').innerHTML = '';
         document.getElementById('prefsArea').innerHTML = '';
         document.getElementById('songsArea').innerHTML = '';
         lastVibe = null;
         Object.keys(prefs).forEach(k => prefs[k] = null);
 
-        const trackList = lines.map((l, i) => `${i + 1}. ${l}`).join('\n');
+        // Fetch Last.fm data in parallel with prep
+        const lfmData = await fetchLastFmData(tracks);
+
+        const trackList = tracks.map((t, i) =>
+            `${i + 1}. ${t.artist} - ${t.title}`).join('\n');
+
+        let lfmContext = '';
+        if (lfmData && lfmData.some(Boolean)) {
+            lfmContext = '\n\nLast.fm data (use for Listener Profile and Scene Positioning dimensions):\n';
+            lfmData.forEach((d, i) => {
+                if (!d) return;
+                lfmContext += `${i + 1}. ${d.artist} - ${d.title}: ${d.listeners.toLocaleString()} listeners, ${d.playcount.toLocaleString()} plays. Tags: ${d.tags.join(', ') || 'n/a'}\n`;
+            });
+        }
 
         const system = `You are an expert house music curator, DJ, and cultural analyst with encyclopaedic knowledge of electronic music subgenres, labels, scenes, and culture.`;
 
-        const user = `Analyse these tracks and return ONLY valid JSON — no markdown, no prose outside the JSON.
+        const user = `Analyse these tracks across 10 dimensions and return ONLY valid JSON — no markdown, no prose outside the JSON.
 
 Tracks:
-${trackList}
+${trackList}${lfmContext}
 
-Return exactly:
+Return exactly this structure:
 {
   "vibeName": "Creative evocative name (e.g. 'Afterhours Deep Seeker')",
-  "vibeDescription": "2–3 sentences on their taste, emotions they chase, and what unifies the selections",
+  "vibeDNA": "A rich 3–4 sentence paragraph synthesising the listener's overall taste fingerprint across all 5 songs — what unifies their selections emotionally, culturally, sonically, and what that says about who they are as a music lover.",
+  "dimensions": [
+    {
+      "id": "tempo",
+      "value": "Short punchy value (e.g. '124–128 BPM · deep swing')",
+      "detail": "One sentence elaborating on rhythmic feel, groove philosophy, and how it serves the music."
+    },
+    {
+      "id": "harmonic",
+      "value": "Short punchy value (e.g. 'Minor modes · dark tension')",
+      "detail": "One sentence on key preferences, modal flavour, and harmonic language across the selections."
+    },
+    {
+      "id": "texture",
+      "value": "Short punchy value (e.g. 'Dense layers · analogue warmth')",
+      "detail": "One sentence on layering density, use of space, and overall sound design philosophy."
+    },
+    {
+      "id": "emotional",
+      "value": "Short punchy value (e.g. 'Slow burn → catharsis')",
+      "detail": "One sentence on the emotional journey these tracks take the listener on."
+    },
+    {
+      "id": "vocal",
+      "value": "Short punchy value (e.g. 'Sparse · processed · hypnotic')",
+      "detail": "One sentence on vocal style, processing, and how vocals function across these selections."
+    },
+    {
+      "id": "production",
+      "value": "Short punchy value (e.g. '2010s Berlin · hardware-driven')",
+      "detail": "One sentence on production era, synthesis approach, and sampling culture."
+    },
+    {
+      "id": "geographic",
+      "value": "Short punchy value referencing specific scenes (e.g. 'Berlin / Ibiza hybrid')",
+      "detail": "One sentence on scene origins, club culture ties (African/Chicago/London/Berlin/Ibiza etc.) and production aesthetic (raw/polished/organic/mechanical)."
+    },
+    {
+      "id": "scene",
+      "value": "Short punchy value (e.g. 'Deep underground · Berghain circle')",
+      "detail": "One sentence on underground vs mainstream positioning, club context, and typical artist/collaborator network for these selections."
+    },
+    {
+      "id": "listener",
+      "value": "Short punchy value describing the listener archetype${lfmData && lfmData.some(Boolean) ? ' (use real Last.fm listener counts)' : ''}",
+      "detail": "One sentence describing who typically listens to these tracks — their identity, scene affiliation, and listening habits${lfmData && lfmData.some(Boolean) ? ', backed by the Last.fm data provided' : ''}."
+    },
+    {
+      "id": "dancefloor",
+      "value": "Short punchy value (e.g. '3am peak · intimate rooms')",
+      "detail": "One sentence on when and where these tracks belong — time of night, venue size, floor energy and function."
+    }
+  ],
   "subgenres": ["subgenre1", "subgenre2", "subgenre3"],
   "energyLevel": "Low | Medium | High | Peak",
   "bpmRange": "e.g. 122–128 BPM",
@@ -728,10 +987,12 @@ Return exactly:
 }`;
 
         try {
-            const raw  = await callAPI(system, user);
+            const raw  = await callAPI(system, user, 3000);
             const vibe = parseJSON(raw);
             lastVibe   = vibe;
+            lastVibe._lfmData = lfmData;
             renderResults(vibe);
+            renderDimensions(vibe, lfmData);
             renderPreferences();
         } catch (err) {
             results.innerHTML = `<div class="error">⚠️ ${esc(err.message)}</div>`;
@@ -780,11 +1041,58 @@ Return exactly:
                     <div class="section-lbl">Subgenre Profile</div>
                     <div class="tags">${subgenreTags}</div>
                 </div>
-                <p class="vibe-desc">${esc(v.vibeDescription)}</p>
                 <div class="section-lbl">Artists You'll Love</div>
                 <div class="recs">${recsHtml}</div>
                 <div class="section-lbl">Your Scene</div>
                 <div class="scene-card">${esc(v.clubScene)}</div>
+            </div>`;
+    }
+
+    // ── Render 10-dimension DNA breakdown ─────────────────────────
+    function renderDimensions(v, lfmData) {
+        const dims = v.dimensions || [];
+        const dimMap = {};
+        dims.forEach(d => { dimMap[d.id] = d; });
+
+        const cardsHtml = DIMENSION_META.map(meta => {
+            const d = dimMap[meta.id] || { value: '—', detail: '' };
+            return `
+            <div class="dna-card">
+                <div class="dna-card-top">
+                    <span class="dna-icon">${meta.icon}</span>
+                    <span class="dna-label">${meta.label}</span>
+                </div>
+                <div class="dna-value">${esc(d.value)}</div>
+                <div class="dna-detail">${esc(d.detail)}</div>
+            </div>`;
+        }).join('');
+
+        let lfmNoteHtml = '';
+        if (lfmData && lfmData.some(Boolean)) {
+            const totalListeners = lfmData.reduce((sum, d) => sum + (d?.listeners || 0), 0);
+            lfmNoteHtml = `
+            <div class="lfm-note">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+                Listener &amp; scene data sourced from Last.fm · ${totalListeners.toLocaleString()} combined listeners across your tracks
+            </div>`;
+        }
+
+        document.getElementById('dnaArea').innerHTML = `
+            <div class="card fade-up">
+                <div class="dna-summary-card">
+                    <div class="dna-summary-label">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        Vibe DNA Summary
+                    </div>
+                    <p class="dna-summary-text">${esc(v.vibeDNA || v.vibeDescription || '')}</p>
+                </div>
+
+                <div class="dimensions-header">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.6"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                    10-Dimension DNA Breakdown
+                </div>
+                <div class="dna-grid">${cardsHtml}</div>
+                ${lfmNoteHtml}
             </div>`;
     }
 
@@ -839,22 +1147,21 @@ Return exactly:
     // ── Preference selection ───────────────────────────────────────
     function selectPref(el) {
         const cat = el.dataset.cat;
-        const val = el.dataset.val;
 
         document.querySelectorAll(`.pref-card[data-cat="${cat}"]`)
             .forEach(c => c.classList.remove('selected'));
 
         el.classList.add('selected');
-        prefs[cat] = val;
+        prefs[cat] = el.dataset.val;
 
         updateProgress();
     }
 
     function updateProgress() {
-        const filled  = Object.values(prefs).filter(Boolean).length;
-        const total   = Object.keys(prefs).length;
-        const dots    = document.querySelectorAll('.prog-dot');
-        const label   = document.getElementById('progLabel');
+        const filled   = Object.values(prefs).filter(Boolean).length;
+        const total    = Object.keys(prefs).length;
+        const dots     = document.querySelectorAll('.prog-dot');
+        const label    = document.getElementById('progLabel');
         const findWrap = document.getElementById('findWrap');
 
         dots.forEach((d, i) => d.classList.toggle('active', i < filled));
@@ -865,9 +1172,7 @@ Return exactly:
                 : `${filled} of ${total} selected`;
         }
 
-        if (findWrap) {
-            findWrap.classList.toggle('show', filled === total);
-        }
+        if (findWrap) findWrap.classList.toggle('show', filled === total);
     }
 
     // ── Step 2: Find songs ─────────────────────────────────────────
@@ -881,16 +1186,25 @@ Return exactly:
         inner.innerHTML = '<div class="spinner"></div> Finding your tracks…';
         document.getElementById('songsArea').innerHTML = '';
 
+        const dims = (lastVibe.dimensions || []);
+        const dimSummary = dims.map(d => {
+            const meta = DIMENSION_META.find(m => m.id === d.id);
+            return `${meta ? meta.label : d.id}: ${d.value}`;
+        }).join('\n');
+
+        const dimNames = DIMENSION_META.map(m => m.label);
+
         const system = `You are an expert house music curator with deep knowledge of real, existing tracks across all house subgenres. You only recommend real songs that genuinely exist.`;
 
-        const user = `Based on this listener's DNA profile and their stated preferences right now, recommend exactly 6 real, existing house music tracks.
+        const user = `Based on this listener's full DNA profile (10 dimensions) and their stated preferences right now, recommend exactly 6 real, existing house music tracks.
 
-Listener DNA:
-- Vibe: ${lastVibe.vibeName}
-- Subgenres: ${(lastVibe.subgenres||[]).join(', ')}
-- Energy: ${lastVibe.energyLevel}
-- BPM Range: ${lastVibe.bpmRange}
-- Mood Tags: ${(lastVibe.moodTags||[]).join(', ')}
+Listener DNA — Vibe Name: ${lastVibe.vibeName}
+Subgenres: ${(lastVibe.subgenres||[]).join(', ')}
+Energy: ${lastVibe.energyLevel} · BPM: ${lastVibe.bpmRange}
+Mood: ${(lastVibe.moodTags||[]).join(', ')}
+
+10-Dimension Profile:
+${dimSummary}
 
 Right Now They Want:
 - Mood: ${prefs.mood}
@@ -899,17 +1213,19 @@ Right Now They Want:
 - Direction: ${prefs.direction}
 
 Return ONLY a valid JSON array of exactly 6 objects. Every track must be real and verifiable.
+For dimensionMatches, pick 2–3 of the most relevant dimension labels from this list: ${dimNames.join(', ')}.
 
 [
   {
     "title": "Exact Song Title",
     "artist": "Artist Name",
-    "why": "Exactly two sentences: the first connects to their DNA profile, the second explains how it matches their current mood and energy preferences."
+    "why": "Two sentences: the first connects to specific dimensions of their DNA profile, the second explains how it matches their current mood and energy preferences.",
+    "dimensionMatches": ["Dimension Label 1", "Dimension Label 2"]
   }
 ]`;
 
         try {
-            const raw   = await callAPI(system, user);
+            const raw   = await callAPI(system, user, 2500);
             const songs = parseJSON(raw);
             if (!Array.isArray(songs)) throw new Error('Unexpected response format.');
             renderSongs(songs);
@@ -929,12 +1245,17 @@ Return ONLY a valid JSON array of exactly 6 objects. Every track must be real an
         const prefs_summary = [prefs.mood, prefs.energy, prefs.vocals, prefs.direction]
             .filter(Boolean).join(' · ');
 
-        const cardsHtml = songs.slice(0, 6).map((s, i) => `
+        const cardsHtml = songs.slice(0, 6).map((s, i) => {
+            const dimTagsHtml = (s.dimensionMatches || []).map(d =>
+                `<span class="dim-match-tag">${esc(d)}</span>`).join('');
+
+            return `
             <div class="song-card">
                 <div class="song-num">Track ${String(i+1).padStart(2,'0')}</div>
                 <div class="song-title">${esc(s.title)}</div>
                 <div class="song-artist">${esc(s.artist)}</div>
                 <div class="song-why">${esc(s.why)}</div>
+                ${dimTagsHtml ? `<div class="dim-matches">${dimTagsHtml}</div>` : ''}
                 <div class="song-links">
                     <a class="link-btn link-yt"
                        href="${searchUrl('yt', s.artist, s.title)}"
@@ -949,7 +1270,8 @@ Return ONLY a valid JSON array of exactly 6 objects. Every track must be real an
                         Spotify
                     </a>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
 
         document.getElementById('songsArea').innerHTML = `
             <div class="card fade-up">
