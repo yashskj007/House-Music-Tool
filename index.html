@@ -530,25 +530,31 @@
         return `linear-gradient(to right, var(--accent) ${pct}%, rgba(201,168,76,0.2) ${pct}%)`;
     }
 
-    async function callAPI(systemPrompt, userPrompt, maxTokens = 1400) {
+    async function callAPI(systemPrompt, userPrompt, maxTokens = 1400, tools = null) {
         const apiKey = apiKeyEl.value.trim();
         if (!apiKey) throw new Error('Please enter your Anthropic API key.');
 
+        const headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-allow-browser': 'true',
+            'anthropic-dangerous-direct-browser-access': 'true'
+        };
+        if (tools) headers['anthropic-beta'] = 'web-search-2025-03-05';
+
+        const body = {
+            model: 'claude-sonnet-4-6',
+            max_tokens: maxTokens,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }]
+        };
+        if (tools) body.tools = tools;
+
         const res = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'anthropic-dangerous-allow-browser': 'true',
-                'anthropic-dangerous-direct-browser-access': 'true'
-            },
-            body: JSON.stringify({
-                model: 'claude-sonnet-4-6',
-                max_tokens: maxTokens,
-                system: systemPrompt,
-                messages: [{ role: 'user', content: userPrompt }]
-            })
+            headers,
+            body: JSON.stringify(body)
         });
 
         if (!res.ok) {
@@ -557,13 +563,31 @@
         }
 
         const data = await res.json();
-        return data?.content?.[0]?.text ?? '';
+        // Collect all text-type content blocks (web search produces multiple blocks)
+        const textBlocks = (data?.content || []).filter(b => b.type === 'text').map(b => b.text);
+        return textBlocks.length ? textBlocks.join('\n') : '';
     }
 
     function parseJSON(raw) {
-        try { return JSON.parse(raw); } catch { /* fall through */ }
+        // Direct parse
+        try { return JSON.parse(raw.trim()); } catch {}
+        // Find the LAST JSON array in the text — Claude may prefix with search reasoning
+        const lastBracket = raw.lastIndexOf('[');
+        if (lastBracket !== -1) {
+            let depth = 0;
+            for (let i = lastBracket; i < raw.length; i++) {
+                if (raw[i] === '[' || raw[i] === '{') depth++;
+                else if (raw[i] === ']' || raw[i] === '}') {
+                    if (--depth === 0) {
+                        try { return JSON.parse(raw.slice(lastBracket, i + 1)); } catch {}
+                        break;
+                    }
+                }
+            }
+        }
+        // Fallback: grab first JSON structure
         const m = raw.match(/[\[{][\s\S]*[\]}]/);
-        if (m) return JSON.parse(m[0]);
+        if (m) { try { return JSON.parse(m[0]); } catch {} }
         throw new Error('Could not parse response. Please try again.');
     }
 
@@ -590,6 +614,23 @@
         const lfmKey = lastfmEl.value.trim();
         if (!lfmKey) return null;
         return Promise.all(tracks.map(({ artist, title }) => fetchLastFmTrack(lfmKey, artist, title)));
+    }
+
+    async function fetchLastFmSimilar(tracks) {
+        const lfmKey = lastfmEl.value.trim();
+        if (!lfmKey) return null;
+        const results = await Promise.all(tracks.map(async ({ artist }) => {
+            try {
+                const url = `https://ws.audioscrobbler.com/2.0/?method=artist.getSimilar&api_key=${encodeURIComponent(lfmKey)}&artist=${encodeURIComponent(artist)}&limit=8&format=json&autocorrect=1`;
+                const res = await fetch(url);
+                if (!res.ok) return null;
+                const data = await res.json();
+                if (data.error || !data.similarartists) return null;
+                const similar = (data.similarartists.artist || []).slice(0, 8).map(a => a.name);
+                return similar.length ? { artist, similar } : null;
+            } catch { return null; }
+        }));
+        return results.filter(Boolean);
     }
 
     // ── Parse tracks ──────────────────────────────────────────────
@@ -628,7 +669,10 @@
         document.getElementById('songsArea').innerHTML = '';
         lastVibe = null;
 
-        const lfmData = await fetchLastFmData(tracks);
+        const [lfmData, lfmSimilar] = await Promise.all([
+            fetchLastFmData(tracks),
+            fetchLastFmSimilar(tracks)
+        ]);
         const trackList = tracks.map((t, i) => `${i + 1}. ${t.artist} - ${t.title}`).join('\n');
 
         let lfmContext = '';
@@ -693,7 +737,8 @@ Return exactly this structure:
             const raw  = await callAPI(system, user, 3200);
             const vibe = parseJSON(raw);
             lastVibe   = vibe;
-            lastVibe._lfmData = lfmData;
+            lastVibe._lfmData   = lfmData;
+            lastVibe._lfmSimilar = lfmSimilar;
             renderResults(vibe);
             renderDimensions(vibe, lfmData);
             renderPreferences();
@@ -1147,9 +1192,33 @@ Always consider Priority Must-Include artists first as candidates for every reco
             .map(i => `${i.name}: ${i.prominence}`)
             .join(', ');
 
-        const system = `You are an expert house music curator with encyclopaedic knowledge of real, existing tracks across all house subgenres and scenes worldwide. You only recommend real songs that genuinely exist.`;
+        // ── Build Last.fm context (source 2) ─────────────────────────
+        const lfmRec = [];
+        const _lfmData    = lastVibe._lfmData    || [];
+        const _lfmSimilar = lastVibe._lfmSimilar || [];
 
-        const user = `Based on this listener's full DNA profile and their calibrated preferences, recommend exactly 6 real, existing house music tracks.
+        if (_lfmData.some(Boolean)) {
+            lfmRec.push('SOURCE 2 — LAST.FM TRACK DATA (from the listener\'s own input songs):');
+            _lfmData.forEach((d, i) => {
+                if (!d) return;
+                lfmRec.push(`  Track ${i+1}: ${d.artist} — ${d.title}`);
+                if (d.tags && d.tags.length) lfmRec.push(`    Tags: ${d.tags.join(', ')}`);
+                if (d.listeners)             lfmRec.push(`    Listeners: ${d.listeners.toLocaleString()}`);
+            });
+        }
+        if (_lfmSimilar.length) {
+            lfmRec.push('\nSOURCE 2b — LAST.FM SIMILAR ARTISTS (sonic neighbours to the input tracks):');
+            _lfmSimilar.forEach(s => {
+                lfmRec.push(`  ${s.artist} → similar artists: ${s.similar.join(', ')}`);
+            });
+        }
+        const lfmBlock = lfmRec.length ? lfmRec.join('\n') + '\n\n' : '';
+
+        const WEB_SEARCH_TOOL = [{ type: 'web_search_20250305', name: 'web_search' }];
+
+        const system = `You are an expert house music curator. You blend three data sources to find the most sonically precise track recommendations: (1) a curated universe of 1,771 priority house artists, (2) Last.fm similar-artist and tag signals derived from the listener's own tracks, and (3) live web search of Beatport, Traxsource, Resident Advisor and Last.fm for current releases. Prioritise sonic fit over fame. Only recommend real, verifiable songs.`;
+
+        const user = `Based on this listener's DNA profile and calibrated preferences, recommend exactly 6 real, existing house music tracks. Blend all three data sources for the most precise result.
 
 Listener DNA — Vibe Name: ${lastVibe.vibeName}
 Subgenres: ${(lastVibe.subgenres||[]).join(', ')}
@@ -1169,14 +1238,24 @@ Listener Preference Profile (normalised to [-1, +1]):
 - section_contrast_preference: ${norm(sliderPrefs.structural)}  (${sliderPrefs.structural}/7 — lower = steady groove, higher = build/breakdown arc)
 - novelty_tolerance: ${norm(sliderPrefs.discovery)}  (${sliderPrefs.discovery}/7 — lower = trusted artists/labels, higher = unfamiliar discoveries)
 
+${lfmBlock}SOURCE 1 — CURATED ARTIST UNIVERSE (1,771 priority artists):
 ${ARTIST_UNIVERSE}
 
-HOUSE SUBGENRE TAXONOMY — recommend from across this full spectrum:
+SOURCE 3 — LIVE WEB SEARCH INSTRUCTIONS:
+Use your web search tool now. Run at least 3 of these searches before deciding on your 6 tracks:
+- "[primary detected subgenre] new releases Beatport 2025"
+- "[geographic/scene dimension value] house music Traxsource 2024 2025"
+- "Resident Advisor recommended tracks [key similar artist from Last.fm list above]"
+- "[top Last.fm tag from above] house music best tracks"
+- "underground [subgenre] house music emerging artists 2024 2025"
+Prioritise sonic fit. Surface tracks you wouldn't otherwise surface from memory alone.
+
+BLENDING RULE: Target 2 picks from the artist universe (Source 1), 2 from the Last.fm similar-artist signals (Source 2b), and 2 discovered via live web search (Source 3). Where sources overlap, take the most sonically precise pick.
+
+HOUSE SUBGENRE TAXONOMY — state the exact subgenre for each recommendation:
 Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, 3-step, Soulful House, Vocal House, Garage House, UK Garage, Bassline House, Speed Garage, UK Funky, Acid House, Jackin House, Ghetto House, Juke/Footwork, Lo-Fi House, Leftfield House, Minimal House, Microhouse, Nu-Disco House, Filter House, French House, Balearic House, Disco House, Latin House, Brazilian House, Indie Dance, Ambient House, Broken Beat-adjacent, Detroit House, NYC House, New Jersey House, Ibiza lineage, Rave-adjacent, Outsider House, Experimental House, South African House, Gqom-adjacent, Rominimal, Deep Tech.
 
-Each recommendation must state which specific subgenre it belongs to.
-
-Return ONLY a valid JSON array of exactly 6 objects. Every track must be real and verifiable.
+After completing all web searches, output ONLY a valid JSON array of exactly 6 objects as the very last thing in your response.
 
 [
   {
@@ -1192,7 +1271,7 @@ Return ONLY a valid JSON array of exactly 6 objects. Every track must be real an
 ]`;
 
         try {
-            const raw   = await callAPI(system, user, 3000);
+            const raw   = await callAPI(system, user, 4000, WEB_SEARCH_TOOL);
             const songs = parseJSON(raw);
             if (!Array.isArray(songs)) throw new Error('Unexpected response format.');
             renderSongs(songs);
