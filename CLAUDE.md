@@ -130,3 +130,4 @@ Site updates at live URL within 60 seconds.
 | Day 5 | Prompt 3: 44-subgenre taxonomy + tiered artist universe + enhanced song cards |
 | Day 6 | CSV extraction: 1,771 priority artists → artist-reference.md → ARTIST_UNIVERSE constant in index.html |
 | Day 7 | Triple-source recommendations built: CSV artist universe + Last.fm similar artists + Claude web search; findSongs uses 2+2+2 blend; web search tool enabled with anthropic-beta header |
+| Day 8 | Fix: parseJSON now strips markdown fences + prefers outermost object (fixes dimension dashes bug); callAPI gets AbortController with configurable timeout (120s for findSongs); slider descriptions added; 2+2+2 quota removed in favour of best-fit selection rule |

@@ -254,7 +254,8 @@
         }
         .slider-group:last-of-type { border-bottom: none; margin-bottom: 24px; }
         .slider-group-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: var(--accent); margin-bottom: 8px; }
-        .slider-question { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.55; margin-bottom: 16px; font-style: italic; }
+        .slider-question { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.55; margin-bottom: 8px; font-style: italic; }
+        .slider-desc { font-size: 12px; color: rgba(255,255,255,0.42); line-height: 1.5; margin-bottom: 14px; }
         .slider-poles { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
         .pole-label { font-size: 10.5px; color: var(--muted); line-height: 1.4; flex: 1; }
         .pole-label.right { text-align: right; }
@@ -460,30 +461,35 @@
         {
             key: 'groove',     label: 'Groove Architecture',
             question: 'When a house record really works for you, what does the groove feel like?',
+            description: 'How mechanical vs. human does the rhythm feel?',
             left:  'Locked / straight / driving / relentless',
             right: 'Swung / syncopated / percussive / breathing',
         },
         {
             key: 'texture',    label: 'Production Texture',
             question: 'What production finish draws you in most?',
+            description: 'How polished and clean vs. raw and warm is the sound?',
             left:  'Warm / dusty / analog / raw / organic',
             right: 'Clean / bright / polished / surgical / digital',
         },
         {
             key: 'harmonic',   label: 'Harmonic Depth',
             question: 'What do you want the music to do to you?',
+            description: 'Do you prefer hypnotic repetition, or melody and emotional movement?',
             left:  'Hypnotize through repetition and restraint',
             right: 'Move me through chords, melody and emotional lift',
         },
         {
             key: 'structural', label: 'Structural Payoff',
             question: 'Across a long house track, what do you value most?',
+            description: 'Do you want a steady groove throughout, or a track that builds and drops?',
             left:  'Unwavering groove — stays in the pocket throughout',
             right: 'A journey — builds, breakdowns, tension and release',
         },
         {
             key: 'discovery',  label: 'Discovery Mode',
             question: 'If two records fit your sonic lane equally, which do you choose?',
+            description: 'How far outside your known artists and labels should recommendations reach?',
             left:  'Trusted artist / label / scene I already know',
             right: 'Unfamiliar corner of house that stretches me a bit',
         },
@@ -530,9 +536,12 @@
         return `linear-gradient(to right, var(--accent) ${pct}%, rgba(201,168,76,0.2) ${pct}%)`;
     }
 
-    async function callAPI(systemPrompt, userPrompt, maxTokens = 1400, tools = null) {
+    async function callAPI(systemPrompt, userPrompt, maxTokens = 1400, tools = null, timeoutMs = 60000) {
         const apiKey = apiKeyEl.value.trim();
         if (!apiKey) throw new Error('Please enter your Anthropic API key.');
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
 
         const headers = {
             'Content-Type': 'application/json',
@@ -551,42 +560,70 @@
         };
         if (tools) body.tools = tools;
 
-        const res = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body)
-        });
+        try {
+            const res = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body),
+                signal: controller.signal
+            });
 
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err?.error?.message || `API error ${res.status}`);
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err?.error?.message || `API error ${res.status}`);
+            }
+
+            const data = await res.json();
+            // Collect all text-type content blocks (web search produces multiple blocks)
+            const textBlocks = (data?.content || []).filter(b => b.type === 'text').map(b => b.text);
+            return textBlocks.length ? textBlocks.join('\n') : '';
+        } catch (err) {
+            if (err.name === 'AbortError') throw new Error('Request timed out — the web search took too long. Please try again.');
+            throw err;
+        } finally {
+            clearTimeout(timer);
         }
-
-        const data = await res.json();
-        // Collect all text-type content blocks (web search produces multiple blocks)
-        const textBlocks = (data?.content || []).filter(b => b.type === 'text').map(b => b.text);
-        return textBlocks.length ? textBlocks.join('\n') : '';
     }
 
     function parseJSON(raw) {
-        // Direct parse
+        // Strip markdown code fences so ```json wrapping doesn't break parsing
+        const stripped = raw.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
+
+        // Direct parse on stripped text
+        try { return JSON.parse(stripped); } catch {}
+        // Direct parse on original (in case stripping broke something)
         try { return JSON.parse(raw.trim()); } catch {}
-        // Find the LAST JSON array in the text — Claude may prefix with search reasoning
-        const lastBracket = raw.lastIndexOf('[');
-        if (lastBracket !== -1) {
+
+        // Find the outermost JSON object { ... } — handles analysis responses
+        const firstBrace = stripped.indexOf('{');
+        if (firstBrace !== -1) {
             let depth = 0;
-            for (let i = lastBracket; i < raw.length; i++) {
-                if (raw[i] === '[' || raw[i] === '{') depth++;
-                else if (raw[i] === ']' || raw[i] === '}') {
+            for (let i = firstBrace; i < stripped.length; i++) {
+                if (stripped[i] === '{' || stripped[i] === '[') depth++;
+                else if (stripped[i] === '}' || stripped[i] === ']') {
                     if (--depth === 0) {
-                        try { return JSON.parse(raw.slice(lastBracket, i + 1)); } catch {}
+                        try { return JSON.parse(stripped.slice(firstBrace, i + 1)); } catch {}
                         break;
                     }
                 }
             }
         }
-        // Fallback: grab first JSON structure
-        const m = raw.match(/[\[{][\s\S]*[\]}]/);
+        // Find the last JSON array — Claude may prefix with search reasoning
+        const lastBracket = stripped.lastIndexOf('[');
+        if (lastBracket !== -1) {
+            let depth = 0;
+            for (let i = lastBracket; i < stripped.length; i++) {
+                if (stripped[i] === '[' || stripped[i] === '{') depth++;
+                else if (stripped[i] === ']' || stripped[i] === '}') {
+                    if (--depth === 0) {
+                        try { return JSON.parse(stripped.slice(lastBracket, i + 1)); } catch {}
+                        break;
+                    }
+                }
+            }
+        }
+        // Last-resort regex
+        const m = stripped.match(/[\[{][\s\S]*[\]}]/);
         if (m) { try { return JSON.parse(m[0]); } catch {} }
         throw new Error('Could not parse response. Please try again.');
     }
@@ -871,6 +908,7 @@ Return exactly this structure:
             <div class="slider-group">
                 <div class="slider-group-label">${esc(s.label)}</div>
                 <div class="slider-question">&ldquo;${esc(s.question)}&rdquo;</div>
+                <div class="slider-desc">${esc(s.description)}</div>
                 <div class="slider-poles">
                     <span class="pole-label">${esc(s.left)}</span>
                     <span class="slider-val" id="val-${s.key}">4</span>
@@ -908,16 +946,7 @@ Return exactly this structure:
     }
 
     // ── Artist Universe (1,771 priority artists from CSV) ─────────────
-    const ARTIST_UNIVERSE = `CRITICAL INSTRUCTION ON ARTIST SELECTION:
-You have access to a wide universe of House music artists across all levels of fame and scene depth.
-Do NOT default to only recommending the top 40-50 most famous house artists.
-Actively include lesser-known, underground, emerging, and niche artists that perfectly fit the sonic profile.
-A precise recommendation of an underground artist is more valuable than a safe famous name.
-
-When recommending, aim for a MIX of: 2-3 tracks from well-known artists, 2-3 from mid-tier scene artists,
-1-2 from genuinely underground or emerging artists. This makes the recommendation set more valuable.
-
-FULL ARTIST UNIVERSE — draw recommendations from ALL tiers and scenes listed below:
+    const ARTIST_UNIVERSE = `FULL ARTIST UNIVERSE — draw from any of these 1,771 priority artists across all tiers and scenes:
 
 PRIORITY MUST-INCLUDE:
 Grigoré, Moojo, PAWSA, Serve Cold, Soda State, The Bausa
@@ -1250,7 +1279,7 @@ Use your web search tool now. Run at least 3 of these searches before deciding o
 - "underground [subgenre] house music emerging artists 2024 2025"
 Prioritise sonic fit. Surface tracks you wouldn't otherwise surface from memory alone.
 
-BLENDING RULE: Target 2 picks from the artist universe (Source 1), 2 from the Last.fm similar-artist signals (Source 2b), and 2 discovered via live web search (Source 3). Where sources overlap, take the most sonically precise pick.
+SELECTION RULE: Pick the 6 best sonic matches regardless of source. Draw freely from the artist universe, Last.fm signals, and web search — best fit wins every slot. Avoid defaulting to only the 40–50 most famous names; include mid-tier and underground artists when they fit better.
 
 HOUSE SUBGENRE TAXONOMY — state the exact subgenre for each recommendation:
 Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, 3-step, Soulful House, Vocal House, Garage House, UK Garage, Bassline House, Speed Garage, UK Funky, Acid House, Jackin House, Ghetto House, Juke/Footwork, Lo-Fi House, Leftfield House, Minimal House, Microhouse, Nu-Disco House, Filter House, French House, Balearic House, Disco House, Latin House, Brazilian House, Indie Dance, Ambient House, Broken Beat-adjacent, Detroit House, NYC House, New Jersey House, Ibiza lineage, Rave-adjacent, Outsider House, Experimental House, South African House, Gqom-adjacent, Rominimal, Deep Tech.
@@ -1271,7 +1300,7 @@ After completing all web searches, output ONLY a valid JSON array of exactly 6 o
 ]`;
 
         try {
-            const raw   = await callAPI(system, user, 4000, WEB_SEARCH_TOOL);
+            const raw   = await callAPI(system, user, 4000, WEB_SEARCH_TOOL, 120000);
             const songs = parseJSON(raw);
             if (!Array.isArray(songs)) throw new Error('Unexpected response format.');
             renderSongs(songs);
