@@ -94,6 +94,7 @@ To regenerate `artist-reference.md` after CSV changes, run the extraction script
 - `context/artist-reference.md` — **Pre-processed reference**: priority 1+2 artists grouped by bucket. Used as the `ARTIST_UNIVERSE` constant in `index.html`.
 - `context/Questions for the House music listeners.docx` — 5 preference question designs with model feed instructions
 - `context/Vibe Code Recommender Schema for Music Preference.docx` — Full music feature analysis framework
+- `context/artist_universe_raw.txt` — Raw 1,771 priority artists as comma-separated text for embedding in prompts
 
 ---
 
@@ -117,3 +118,4 @@ Site updates at live URL within 60 seconds.
 | Day 4 | Prompt 2: 12-instrument profile table + 5 calibrated sliders (1–7) |
 | Day 5 | Prompt 3: 44-subgenre taxonomy + tiered artist universe + enhanced song cards |
 | Day 6 | CSV extraction: 1,771 priority artists → artist-reference.md → ARTIST_UNIVERSE constant in index.html |
+| Day 7 | Triple-source recommendations built: CSV artist universe + Last.fm similar artists + Claude web search; findSongs uses 2+2+2 blend; web search tool enabled with anthropic-beta header |
