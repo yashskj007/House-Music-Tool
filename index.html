@@ -640,16 +640,21 @@
                 }
             }
         }
-        // Find the last JSON array — Claude may prefix with search reasoning
-        const lastBracket = stripped.lastIndexOf('[');
-        if (lastBracket !== -1) {
-            let depth = 0;
-            for (let i = lastBracket; i < stripped.length; i++) {
-                if (stripped[i] === '[' || stripped[i] === '{') depth++;
-                else if (stripped[i] === ']' || stripped[i] === '}') {
-                    if (--depth === 0) {
-                        try { return JSON.parse(stripped.slice(lastBracket, i + 1)); } catch {}
-                        break;
+        // Find the last JSON array — only when array precedes any object in the text.
+        // Guards against extracting the recommendations sub-array from a truncated
+        // analyseVibe response (where firstBrace=0 < firstBracket).
+        const firstBracket = stripped.indexOf('[');
+        if (firstBrace === -1 || (firstBracket !== -1 && firstBracket < firstBrace)) {
+            const lastBracket = stripped.lastIndexOf('[');
+            if (lastBracket !== -1) {
+                let depth = 0;
+                for (let i = lastBracket; i < stripped.length; i++) {
+                    if (stripped[i] === '[' || stripped[i] === '{') depth++;
+                    else if (stripped[i] === ']' || stripped[i] === '}') {
+                        if (--depth === 0) {
+                            try { return JSON.parse(stripped.slice(lastBracket, i + 1)); } catch {}
+                            break;
+                        }
                     }
                 }
             }
@@ -1405,7 +1410,7 @@ Output ONLY a valid JSON array of 6–8 objects:
             : `Matched to &nbsp;<strong style="color:var(--accent)">${esc(sliderSummary)}</strong>`;
 
         const cardsHtml = songs.slice(0, 8).map((s, i) => {
-            const prefTagsHtml = (s.prefMatches || [])
+            const dimTagsHtml = (s.dimensionMatches || [])
                 .map(p => `<span class="pref-match-tag">${esc(p)}</span>`).join('');
 
             return `
@@ -1424,10 +1429,10 @@ Output ONLY a valid JSON array of 6–8 objects:
                 <div class="song-meta-row" style="margin-bottom:10px">
                     <span class="song-meta-label">Match</span>
                     <span style="font-size:11.5px;color:var(--muted);font-style:italic;line-height:1.55">${esc(s.weightMatch)}</span>
-                </div>` : prefTagsHtml ? `
+                </div>` : dimTagsHtml ? `
                 <div class="song-meta-row" style="margin-bottom:12px">
-                    <span class="song-meta-label">Pref Match</span>
-                    <div class="pref-matches">${prefTagsHtml}</div>
+                    <span class="song-meta-label">Dimension Match</span>
+                    <div class="pref-matches">${dimTagsHtml}</div>
                 </div>` : ''}
                 <div class="song-why">${esc(s.why)}</div>
                 <div class="song-links">
