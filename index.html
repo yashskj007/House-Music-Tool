@@ -250,41 +250,27 @@
         .instrument-rating.none { color: var(--muted); }
         .instrument-rating.low  { color: rgba(201,168,76,0.55); }
 
-        /* ── Sliders ── */
+        /* ── Option Questions ── */
         .prefs-header { margin-bottom: 30px; }
         .prefs-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px; }
         .prefs-subtitle { font-size: 13px; color: var(--muted); line-height: 1.6; }
-        .slider-group {
-            margin-bottom: 28px; padding-bottom: 28px;
-            border-bottom: 1px solid rgba(201,168,76,0.08);
+        .question-group { margin-bottom: 28px; padding-bottom: 28px; border-bottom: 1px solid rgba(201,168,76,0.08); }
+        .question-group:last-of-type { border-bottom: none; margin-bottom: 24px; }
+        .question-group-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: var(--accent); margin-bottom: 8px; }
+        .question-desc { font-size: 12px; color: rgba(255,255,255,0.42); line-height: 1.5; margin-bottom: 10px; }
+        .question-text { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.55; margin-bottom: 14px; font-style: italic; }
+        .options-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .option-card {
+            flex: 1; min-width: 120px; padding: 10px 12px;
+            border: 1px solid rgba(201,168,76,0.18); cursor: pointer;
+            font-size: 12px; line-height: 1.45; color: rgba(255,255,255,0.7);
+            transition: background 0.15s, border-color 0.15s; text-align: center;
+            background: transparent; -webkit-user-select: none; user-select: none;
         }
-        .slider-group:last-of-type { border-bottom: none; margin-bottom: 24px; }
-        .slider-group-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; color: var(--accent); margin-bottom: 8px; }
-        .slider-question { font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.55; margin-bottom: 8px; font-style: italic; }
-        .slider-desc { font-size: 12px; color: rgba(255,255,255,0.42); line-height: 1.5; margin-bottom: 14px; }
-        .slider-poles { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-        .pole-label { font-size: 10.5px; color: var(--muted); line-height: 1.4; flex: 1; }
-        .pole-label.right { text-align: right; }
-        .slider-val {
-            font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700;
-            color: var(--accent); min-width: 22px; text-align: center; flex-shrink: 0;
-            font-variant-numeric: tabular-nums; padding-top: 1px;
-        }
-        input[type="range"] {
-            -webkit-appearance: none; appearance: none;
-            width: 100%; height: 2px; outline: none; cursor: pointer; border-radius: 0;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 14px; height: 14px; background: var(--accent); border-radius: 50%;
-            cursor: grab; border: 2px solid var(--bg); box-shadow: 0 0 0 1px rgba(201,168,76,0.4);
-        }
-        input[type="range"]::-moz-range-thumb {
-            width: 14px; height: 14px; background: var(--accent);
-            border-radius: 50%; cursor: grab; border: 2px solid var(--bg);
-        }
-        input[type="range"]::-webkit-slider-runnable-track { height: 2px; }
-        input[type="range"]:focus { outline: none; }
+        .option-card:hover { background: rgba(255,255,255,0.04); }
+        .option-card.selected { border-color: var(--accent); background: rgba(201,168,76,0.08); color: #fff; }
+        .progress-indicator { font-size: 11px; color: var(--muted); margin-bottom: 20px; letter-spacing: 0.05em; }
+        .progress-indicator span { color: var(--accent); font-weight: 700; }
 
         /* ── Song cards ── */
         .songs-header { margin-bottom: 24px; }
@@ -342,9 +328,8 @@
             .scorecard-row { grid-template-columns: 18px 90px 1fr; }
             .site-header { padding: 12px 16px; }
             .card { padding: 24px 20px; }
-            .slider-poles { flex-wrap: wrap; }
-            .pole-label.right { order: 3; text-align: left; }
-            .slider-val { order: 2; }
+            .options-row { flex-direction: column; }
+            .option-card { min-width: unset; }
         }
     </style>
 </head>
@@ -433,7 +418,7 @@
 <script>
     // ── State ──────────────────────────────────────────────────────
     let lastVibe = null;
-    const sliderPrefs = { groove: 4, texture: 4, harmonic: 4, structural: 4, discovery: 4 };
+    const questionAnswers = { beat_feel: null, sound_texture: null, emotion_hypnosis: null, track_journey: null, discovery_style: null };
 
     // ── SVG icons ──────────────────────────────────────────────────
     const DIM_ICONS = {
@@ -463,41 +448,71 @@
         { id: 'dancefloor',  label: 'Dancefloor Function'       },
     ];
 
-    const SLIDERS = [
+    const QUESTIONS = [
         {
-            key: 'groove',     label: 'Groove Architecture',
-            question: 'When a house record really works for you, what does the groove feel like?',
-            description: 'How mechanical vs. human does the rhythm feel?',
-            left:  'Locked / straight / driving / relentless',
-            right: 'Swung / syncopated / percussive / breathing',
+            key: 'beat_feel',
+            label: 'BEAT FEEL',
+            description: 'This tells us whether you like house music that feels clean and driving, or more bouncy and percussion-led.',
+            question: 'When you hear a house track, what kind of beat usually pulls you in more?',
+            options: [
+                'A clean, steady beat that drives forward',
+                'Mostly steady, with a little bounce',
+                'A balance of steady and bouncy',
+                'More bounce, swing, and percussion',
+                'Very percussive, groovy, and body-moving',
+            ],
         },
         {
-            key: 'texture',    label: 'Production Texture',
-            question: 'What production finish draws you in most?',
-            description: 'How polished and clean vs. raw and warm is the sound?',
-            left:  'Warm / dusty / analog / raw / organic',
-            right: 'Clean / bright / polished / surgical / digital',
+            key: 'sound_texture',
+            label: 'SOUND TEXTURE',
+            description: 'This tells us whether you prefer warm, organic sounds or clean, polished production.',
+            question: 'What kind of sound do you usually prefer in house music?',
+            options: [
+                'Warm, raw, earthy, and organic',
+                'Mostly warm, but still clean',
+                'Balanced between organic and polished',
+                'Mostly clean, bright, and modern',
+                'Very polished, crisp, shiny, and produced',
+            ],
         },
         {
-            key: 'harmonic',   label: 'Harmonic Depth',
-            question: 'What do you want the music to do to you?',
-            description: 'Do you prefer hypnotic repetition, or melody and emotional movement?',
-            left:  'Hypnotize through repetition and restraint',
-            right: 'Move me through chords, melody and emotional lift',
+            key: 'emotion_hypnosis',
+            label: 'EMOTION VS HYPNOSIS',
+            description: 'This tells us whether you want the track to create a hypnotic groove or an emotional melodic feeling.',
+            question: 'What do you want a house track to do for you more often?',
+            options: [
+                'Keep me locked into a deep, hypnotic groove',
+                'Mostly hypnotic, with some emotion',
+                'A balance of groove and emotion',
+                'Mostly emotional, melodic, and expressive',
+                'Give me strong melodies, chords, and emotional lift',
+            ],
         },
         {
-            key: 'structural', label: 'Structural Payoff',
-            question: 'Across a long house track, what do you value most?',
-            description: 'Do you want a steady groove throughout, or a track that builds and drops?',
-            left:  'Unwavering groove — stays in the pocket throughout',
-            right: 'A journey — builds, breakdowns, tension and release',
+            key: 'track_journey',
+            label: 'TRACK JOURNEY',
+            description: 'This tells us whether you like a track that stays steady or one that builds into bigger moments.',
+            question: 'In a house track, what kind of structure do you enjoy more?',
+            options: [
+                'A steady groove that stays consistent throughout',
+                'Mostly steady, with small changes',
+                'A mix of steady groove and build-ups',
+                'Clear build-ups, breakdowns, and releases',
+                'A full journey with big tension and payoff moments',
+            ],
         },
         {
-            key: 'discovery',  label: 'Discovery Mode',
-            question: 'If two records fit your sonic lane equally, which do you choose?',
-            description: 'How far outside your known artists and labels should recommendations reach?',
-            left:  'Trusted artist / label / scene I already know',
-            right: 'Unfamiliar corner of house that stretches me a bit',
+            key: 'discovery_style',
+            label: 'DISCOVERY STYLE',
+            description: 'This tells us whether you prefer trusted artists and scenes or are open to new, unfamiliar sounds.',
+            question: 'When discovering new house music, what makes you more likely to try a track?',
+            options: [
+                'I trust artists, labels, or scenes I already know',
+                "I prefer familiar names, but I'll explore a little",
+                'Both familiar names and new discoveries matter',
+                'I care more about the sound than the name',
+                'I love finding unknown artists if the vibe is right',
+            ],
         },
     ];
 
@@ -537,10 +552,6 @@
         return 'https://open.spotify.com/search/' + encodeURIComponent(q);
     }
 
-    function trackBg(val) {
-        const pct = ((val - 1) / 6) * 100;
-        return `linear-gradient(to right, var(--accent) ${pct}%, rgba(201,168,76,0.2) ${pct}%)`;
-    }
 
     async function callAPI(systemPrompt, userPrompt, maxTokens = 1400, tools = null, timeoutMs = 60000) {
         const apiKey = apiKeyEl.value.trim();
@@ -907,32 +918,29 @@ Return exactly this structure:
             </div>`;
     }
 
-    // ── Render 5 slider preferences ───────────────────────────────
+    // ── Render 5 option questions ──────────────────────────────────
     function renderPreferences() {
-        const defaultBg = trackBg(4);
-        const slidersHtml = SLIDERS.map(s => `
-            <div class="slider-group">
-                <div class="slider-group-label">${esc(s.label)}</div>
-                <div class="slider-question">&ldquo;${esc(s.question)}&rdquo;</div>
-                <div class="slider-desc">${esc(s.description)}</div>
-                <div class="slider-poles">
-                    <span class="pole-label">${esc(s.left)}</span>
-                    <span class="slider-val" id="val-${s.key}">4</span>
-                    <span class="pole-label right">${esc(s.right)}</span>
+        const questionsHtml = QUESTIONS.map(q => `
+            <div class="question-group">
+                <div class="question-group-label">${esc(q.label)}</div>
+                <div class="question-desc">${esc(q.description)}</div>
+                <div class="question-text">&ldquo;${esc(q.question)}&rdquo;</div>
+                <div class="options-row">
+                    ${q.options.map((opt, i) => `
+                    <div class="option-card" id="opt-${q.key}-${i+1}" onclick="selectOption('${q.key}', ${i+1})">
+                        ${esc(opt)}
+                    </div>`).join('')}
                 </div>
-                <input type="range" min="1" max="7" value="4"
-                       id="slider-${s.key}"
-                       style="background:${defaultBg}"
-                       oninput="updateSlider('${s.key}', this.value)">
             </div>`).join('');
 
         document.getElementById('prefsArea').innerHTML = `
             <div class="card">
                 <div class="prefs-header">
                     <div class="prefs-title">Calibrate Your Sound</div>
-                    <div class="prefs-subtitle">Set where you sit on each axis right now.</div>
+                    <div class="prefs-subtitle">Answer all 5 questions to unlock your recommendations.</div>
                 </div>
-                ${slidersHtml}
+                <div class="progress-indicator" id="progressIndicator"><span>0</span> of 5 selected</div>
+                ${questionsHtml}
                 <div class="divider"></div>
                 <div class="field">
                     <label>
@@ -940,29 +948,49 @@ Return exactly this structure:
                         Describe Your Moment
                         <span class="badge-optional">Optional</span>
                     </label>
-                    <div class="slider-question" style="margin-bottom:10px">&ldquo;Describe the music you want (mood, artists, activities, anything!)&rdquo;</div>
+                    <div class="question-text" style="margin-bottom:10px">&ldquo;Describe the music you want (mood, artists, activities, anything!)&rdquo;</div>
                     <textarea id="freeText" style="height:88px" placeholder="e.g. something for a late night drive, melancholic but groovy, like early Black Coffee…"></textarea>
                     <div class="hint">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.45"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg>
-                        Optional — if blank the system auto-adjusts weights between your analysis profile and slider settings.
+                        Optional — if blank the system auto-adjusts weights between your analysis profile and question settings.
                     </div>
                 </div>
-                <button class="btn-primary" id="findBtn" onclick="findSongs()">
-                    <div class="btn-inner" id="findBtnInner">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                        Find My Resonance
-                    </div>
-                </button>
+                <div id="findBtnWrap" style="display:none;opacity:0;transition:opacity 0.35s">
+                    <button class="btn-primary" id="findBtn" onclick="findSongs()">
+                        <div class="btn-inner" id="findBtnInner">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            Find My Resonance
+                        </div>
+                    </button>
+                </div>
             </div>`;
+
+        // Restore any previously selected answers
+        QUESTIONS.forEach(q => {
+            if (questionAnswers[q.key] !== null) selectOption(q.key, questionAnswers[q.key]);
+        });
     }
 
-    // ── Slider update ─────────────────────────────────────────────
-    function updateSlider(key, val) {
-        sliderPrefs[key] = parseInt(val);
-        const el = document.getElementById('val-' + key);
-        if (el) el.textContent = val;
-        const track = document.getElementById('slider-' + key);
-        if (track) track.style.background = trackBg(parseInt(val));
+    // ── Option select ─────────────────────────────────────────────
+    function selectOption(key, val) {
+        questionAnswers[key] = val;
+        for (let i = 1; i <= 5; i++) {
+            const el = document.getElementById(`opt-${key}-${i}`);
+            if (el) el.classList.toggle('selected', i === val);
+        }
+        const count = Object.values(questionAnswers).filter(v => v !== null).length;
+        const prog = document.getElementById('progressIndicator');
+        if (prog) prog.innerHTML = `<span>${count}</span> of 5 selected`;
+        const wrap = document.getElementById('findBtnWrap');
+        if (wrap) {
+            if (count === 5) {
+                wrap.style.display = 'block';
+                requestAnimationFrame(() => { wrap.style.opacity = '1'; });
+            } else {
+                wrap.style.opacity = '0';
+                wrap.style.display = 'none';
+            }
+        }
     }
 
     // ── Artist Universe (1,771 priority artists from CSV) ─────────────
@@ -1248,7 +1276,7 @@ Laurent Garnier
             setStatus(statusMsgs[msgIdx]);
         }, 8000);
 
-        const norm = v => ((v - 4) / 3).toFixed(2);
+        const norm = v => ((v - 3) / 2).toFixed(2);
 
         const dimSummary = (lastVibe.dimensions || []).map(d => {
             const meta = DIMENSION_META.find(m => m.id === d.id);
@@ -1294,8 +1322,8 @@ Laurent Garnier
 
         // ── Scoring weights ───────────────────────────────────────────
         const weightsBlock = hasFreeText
-            ? `SCORING WEIGHTS:\n- Weight A — 10-Dimension Analysis: 40%\n- Weight B — Slider Calibration: 30%\n- Weight C — Free Text Description: 30%`
-            : `SCORING WEIGHTS:\n- Weight A — 10-Dimension Analysis: 57%\n- Weight B — Slider Calibration: 43%`;
+            ? `SCORING WEIGHTS:\n- Weight A — 10-Dimension Analysis: 40%\n- Weight B — Question Calibration: 30%\n- Weight C — Free Text Description: 30%`
+            : `SCORING WEIGHTS:\n- Weight A — 10-Dimension Analysis: 57%\n- Weight B — Question Calibration: 43%`;
 
         const freeTextBlock = hasFreeText
             ? `\nWEIGHT C — FREE TEXT (30%):\nParse for mood keywords, artist references, activity context, energy, scene:\n"${freeText}"\n`
@@ -1314,7 +1342,7 @@ ${dimSummary}
 Instrumentation: ${instrSummary || 'not available'}
 
 WEIGHT B — SLIDER CALIBRATION:
-groove ${norm(sliderPrefs.groove)} (locked→swung) · texture ${norm(sliderPrefs.texture)} (warm→clean) · harmonic ${norm(sliderPrefs.harmonic)} (minimal→melodic) · structure ${norm(sliderPrefs.structural)} (steady→build-drop) · discovery ${norm(sliderPrefs.discovery)} (familiar→unfamiliar)
+beat_feel ${norm(questionAnswers.beat_feel)} (driving→percussive) · sound_texture ${norm(questionAnswers.sound_texture)} (warm/analog→polished/digital) · emotion_hypnosis ${norm(questionAnswers.emotion_hypnosis)} (hypnotic→melodic) · track_journey ${norm(questionAnswers.track_journey)} (steady groove→build/drop arc) · discovery_style ${norm(questionAnswers.discovery_style)} (trusted artists→sound-led/unknown)
 ${freeTextBlock}
 Context: ${lastVibe.vibeName} · Subgenres: ${(lastVibe.subgenres||[]).join(', ')}
 Energy: ${lastVibe.energyLevel} · BPM: ${lastVibe.bpmRange} · Mood: ${(lastVibe.moodTags||[]).join(', ')}
@@ -1440,7 +1468,7 @@ Output ONLY a valid JSON array of 1–2 objects:
 
     // ── Render songs ──────────────────────────────────────────────
     function renderSongs(songs, freeText) {
-        const sliderSummary = `Groove ${sliderPrefs.groove} · Texture ${sliderPrefs.texture} · Harmonic ${sliderPrefs.harmonic} · Structure ${sliderPrefs.structural} · Discovery ${sliderPrefs.discovery}`;
+        const sliderSummary = `Beat ${questionAnswers.beat_feel} · Texture ${questionAnswers.sound_texture} · Emotion ${questionAnswers.emotion_hypnosis} · Journey ${questionAnswers.track_journey} · Discovery ${questionAnswers.discovery_style}`;
         const subtitle = freeText
             ? `Weighted match — <strong style="color:var(--accent)">&ldquo;${esc(freeText.slice(0,60))}${freeText.length > 60 ? '…' : ''}&rdquo;</strong>`
             : `Matched to &nbsp;<strong style="color:var(--accent)">${esc(sliderSummary)}</strong>`;
