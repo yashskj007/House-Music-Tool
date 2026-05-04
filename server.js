@@ -36,7 +36,7 @@ app.get('/api/daily-limit', (req, res) => {
     res.json({ date: dailyUsage.date, count: dailyUsage.count, limit: 200 });
 });
 
-// Claude proxy — streams SSE back to browser, web search enabled
+// Claude proxy — awaits full response and returns JSON, web search enabled
 app.post('/api/claude', async (req, res) => {
     if (!checkAndIncrement()) {
         return res.status(429).json({
@@ -49,7 +49,6 @@ app.post('/api/claude', async (req, res) => {
         max_tokens: req.body.max_tokens || 2000,
         system: req.body.system,
         messages: req.body.messages,
-        stream: true,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
     };
 
@@ -69,18 +68,22 @@ app.post('/api/claude', async (req, res) => {
         return res.status(502).json({ error: { message: `Upstream fetch failed: ${err.message}` } });
     }
 
+    const data = await upstream.json().catch(() => ({}));
+
     if (!upstream.ok) {
-        const err = await upstream.json().catch(() => ({}));
-        console.error('[claude] upstream error:', upstream.status, JSON.stringify(err));
+        console.error('[claude] upstream error:', upstream.status, JSON.stringify(data));
         return res.status(upstream.status).json({
-            error: err.error || { message: `Upstream error ${upstream.status}` }
+            error: data.error || { message: `Upstream error ${upstream.status}` }
         });
     }
 
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('X-Accel-Buffering', 'no');
-    upstream.body.pipe(res);
+    const fullText = (data.content || [])
+        .filter(b => b.type === 'text')
+        .map(b => b.text)
+        .join('\n');
+
+    console.log('[claude] response length:', fullText.length, '| stop_reason:', data.stop_reason);
+    res.json({ content: fullText });
 });
 
 // Last.fm proxy

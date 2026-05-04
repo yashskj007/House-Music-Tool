@@ -549,52 +549,13 @@
                 signal: controller.signal,
             });
 
+            const data = await res.json().catch(() => ({}));
+
             if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err?.error?.message || `API error ${res.status}`);
+                throw new Error(data?.error?.message || `API error ${res.status}`);
             }
 
-            const contentType = res.headers.get('content-type') || '';
-
-            // Fallback: if proxy returns plain JSON (non-streaming), handle it directly
-            if (contentType.includes('application/json')) {
-                const data = await res.json();
-                const textBlocks = (data?.content || []).filter(b => b.type === 'text').map(b => b.text);
-                return textBlocks.join('\n');
-            }
-
-            // Read SSE stream, accumulate text_delta events into full text
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            let fullText = '';
-            let buf = '';
-
-            const processLine = (line) => {
-                if (!line.startsWith('data: ')) return;
-                const raw = line.slice(6).trim();
-                if (!raw || raw === '[DONE]') return;
-                try {
-                    const evt = JSON.parse(raw);
-                    if (evt.type === 'error') throw new Error(evt.error?.message || 'Streaming error from API');
-                    if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
-                        fullText += evt.delta.text;
-                    }
-                } catch (e) {
-                    if (e.message.includes('Streaming error')) throw e;
-                }
-            };
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buf += decoder.decode(value, { stream: true });
-                const lines = buf.split('\n');
-                buf = lines.pop(); // keep incomplete last line in buffer
-                for (const line of lines) processLine(line);
-            }
-            // Flush any remaining buffered line
-            if (buf.trim()) processLine(buf.trim());
-
+            const fullText = data.content || '';
             console.log('[callAPI] fullText length:', fullText.length, '| preview:', fullText.slice(0, 80));
             if (!fullText) throw new Error('Empty response from API — please try again.');
             return fullText;
