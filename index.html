@@ -320,6 +320,9 @@
         .link-yt:hover { background: rgba(255,80,80,0.06); }
         .link-sp { background: transparent; border: 1px solid rgba(30,215,96,0.2); color: #1ED760; }
         .link-sp:hover { background: rgba(30,215,96,0.06); }
+        .link-lfm { background: transparent; border: 1px solid rgba(188,51,51,0.25); color: #d4645b; }
+        .link-lfm:hover { background: rgba(188,51,51,0.06); }
+        .song-verify { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 8px; letter-spacing: 0.03em; }
 
         /* ── Last.fm note ── */
         .lfm-note { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); margin-top: 8px; }
@@ -546,10 +549,13 @@
     }
 
     function searchUrl(platform, artist, title) {
-        const q = `${artist} ${title}`;
-        if (platform === 'yt')
-            return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q).replace(/%20/g,'+');
-        return 'https://open.spotify.com/search/' + encodeURIComponent(q);
+        const q = encodeURIComponent(`${artist} ${title}`).replace(/%20/g, '+');
+        if (platform === 'yt')  return `https://music.youtube.com/search?q=${q}`;
+        if (platform === 'sp')  return `https://open.spotify.com/search/${q}/tracks`;
+        // lfm: Last.fm direct song page
+        const a = encodeURIComponent(artist).replace(/%20/g, '+');
+        const t = encodeURIComponent(title).replace(/%20/g, '+');
+        return `https://www.last.fm/music/${a}/_/${t}`;
     }
 
 
@@ -1352,6 +1358,8 @@ ${compactArtists}
 
 SELECTION RULE: Pick the 6 best-scoring songs from ARTIST_UNIVERSE and Last.fm signals. Include mid-tier and underground artists — never default to only the top 40–50 most famous names.
 
+CRITICAL — REAL TRACKS ONLY: Only recommend songs you are highly confident actually exist as released tracks. (1) Only recommend a song if you have seen it referenced in your training data as a real released track. (2) Do not invent track names that sound plausible — only use real titles you are certain about. (3) If you are less than 90% confident a specific track exists, recommend a different confirmed track by the same artist instead. (4) For underground or emerging artists where you are unsure of specific track titles, use their most well-known confirmed track. (5) Never fabricate titles.
+
 SUBGENRES: ${subgenres}
 
 Output ONLY a valid JSON array of exactly 6 objects:
@@ -1414,6 +1422,8 @@ Search for: "[primary subgenre] new release Beatport OR Traxsource 2025"
 
 Return 1–2 genuinely different tracks from the search results that fit this listener's style.
 
+CRITICAL — REAL TRACKS ONLY: Only use track titles that appear in the actual search results. Do not invent or guess titles. If a result is ambiguous, skip it and use only confirmed tracks.
+
 Output ONLY a valid JSON array of 1–2 objects:
 [
   {
@@ -1448,7 +1458,10 @@ Output ONLY a valid JSON array of 1–2 objects:
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>YouTube</a>
                         <a class="link-btn link-sp" href="${searchUrl('sp', s.artist, s.title)}" target="_blank" rel="noopener">
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 0 1 .207.857zm1.223-2.722a.779.779 0 0 1-1.071.257c-2.687-1.652-6.785-2.131-9.965-1.166a.779.779 0 0 1-.435-1.493c3.632-1.057 8.147-.546 11.214 1.331a.779.779 0 0 1 .257 1.071zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 1 1-.543-1.79c3.532-1.072 9.404-.865 13.115 1.337a.935.935 0 0 1-.955 1.61z"/></svg>Spotify</a>
+                        <a class="link-btn link-lfm" href="${searchUrl('lfm', s.artist, s.title)}" target="_blank" rel="noopener">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M10.96 2C5.991 2 2 5.99 2 10.96c0 4.97 3.99 8.96 8.96 8.96 4.97 0 8.96-3.99 8.96-8.96C19.92 5.99 15.93 2 10.96 2zm3.44 12.71l-1.15-2.77-1.85 2.1-2.01-4.21-.85 2.88H6.83l.98-3.34 1.14.44 1.29-4.36 1.94 4.05 1.86-2.1 1.65 3.97 1.14-1.81h1.34l-2.72 5.15z"/></svg>Last.fm</a>
                     </div>
+                    <div class="song-verify">Verify on streaming platforms before listening.</div>
                 </div>`).join('');
 
             const divider = `<div style="padding:12px 0 4px;border-top:1px solid rgba(201,168,76,0.12)">
@@ -1508,7 +1521,12 @@ Output ONLY a valid JSON array of 1–2 objects:
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 0 1 .207.857zm1.223-2.722a.779.779 0 0 1-1.071.257c-2.687-1.652-6.785-2.131-9.965-1.166a.779.779 0 0 1-.435-1.493c3.632-1.057 8.147-.546 11.214 1.331a.779.779 0 0 1 .257 1.071zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 1 1-.543-1.79c3.532-1.072 9.404-.865 13.115 1.337a.935.935 0 0 1-.955 1.61z"/></svg>
                         Spotify
                     </a>
+                    <a class="link-btn link-lfm" href="${searchUrl('lfm', s.artist, s.title)}" target="_blank" rel="noopener">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M10.96 2C5.991 2 2 5.99 2 10.96c0 4.97 3.99 8.96 8.96 8.96 4.97 0 8.96-3.99 8.96-8.96C19.92 5.99 15.93 2 10.96 2zm3.44 12.71l-1.15-2.77-1.85 2.1-2.01-4.21-.85 2.88H6.83l.98-3.34 1.14.44 1.29-4.36 1.94 4.05 1.86-2.1 1.65 3.97 1.14-1.81h1.34l-2.72 5.15z"/></svg>
+                        Last.fm
+                    </a>
                 </div>
+                <div class="song-verify">Verify on streaming platforms before listening.</div>
             </div>`;
         }).join('');
 
