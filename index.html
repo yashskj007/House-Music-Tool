@@ -609,12 +609,21 @@
     function parseJSON(raw) {
         console.log('[parseJSON] input length:', raw?.length, '| preview:', String(raw).slice(0, 120));
         if (!raw || !raw.trim()) throw new Error('Empty response received — please try again.');
-        // Strip markdown code fences so ```json wrapping doesn't break parsing
-        const stripped = raw.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
 
-        // Direct parse on stripped text
+        // Primary: extract content captured between ```json ... ``` or ``` ... ``` fences
+        const fenceMatch = raw.match(/```(?:json)?\s*\n([\s\S]+?)\n?\s*```/);
+        if (fenceMatch) {
+            const inner = fenceMatch[1].trim();
+            console.log('[parseJSON] fence extracted, length:', inner.length, '| preview:', inner.slice(0, 80));
+            try { return JSON.parse(inner); } catch (e) {
+                console.warn('[parseJSON] fence-extracted parse failed:', e.message);
+            }
+        }
+
+        // Fallback: strip all fence markers then parse
+        const stripped = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
         try { return JSON.parse(stripped); } catch {}
-        // Direct parse on original (in case stripping broke something)
+        // Fallback: try raw directly
         try { return JSON.parse(raw.trim()); } catch {}
 
         // Find the outermost JSON object { ... } — handles analysis responses
@@ -787,6 +796,7 @@ Return exactly this structure:
         try {
             const raw  = await callAPI(system, user, 3200);
             const vibe = parseJSON(raw);
+            console.log('[analyseVibe] parsed keys:', Object.keys(vibe || {}), '| vibeName:', vibe?.vibeName);
             lastVibe   = vibe;
             lastVibe._lfmData   = lfmData;
             lastVibe._lfmSimilar = lfmSimilar;
