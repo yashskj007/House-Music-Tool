@@ -188,12 +188,16 @@ app.post('/api/claude', async (req, res) => {
         });
     }
 
-    const fullText = (data.content || [])
+    const blocks = data.content || [];
+    const blockSummary = blocks.map(b => b.type).join(', ');
+    console.log('[claude] stop_reason:', data.stop_reason, '| blocks:', blockSummary);
+
+    const fullText = blocks
         .filter(b => b.type === 'text')
         .map(b => b.text)
         .join('\n');
 
-    console.log('[claude] response length:', fullText.length, '| stop_reason:', data.stop_reason);
+    console.log('[claude] sending content length:', fullText.length, '| preview:', fullText.slice(0, 120));
     res.json({ content: fullText });
 });
 

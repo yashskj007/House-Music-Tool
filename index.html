@@ -1081,7 +1081,15 @@ Output ONLY a valid JSON array of 6–8 objects:
 
         try {
             const raw   = await callAPI(system, user, 2000, null, 120000, { subgenres: lastVibe.subgenres || [] });
-            const songs = parseJSON(raw);
+            let songs   = parseJSON(raw);
+            // Claude sometimes wraps the array in an object when web search is active
+            if (!Array.isArray(songs) && songs && typeof songs === 'object') {
+                const unwrapped = Object.values(songs).find(v => Array.isArray(v));
+                if (unwrapped) {
+                    console.log('[findSongs] unwrapped array from object, key count:', Object.keys(songs).length);
+                    songs = unwrapped;
+                }
+            }
             if (!Array.isArray(songs)) throw new Error('Unexpected response format — please try again.');
             renderSongs(songs, hasFreeText ? freeText : null);
         } catch (err) {
