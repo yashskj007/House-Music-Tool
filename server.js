@@ -146,25 +146,35 @@ app.post('/api/claude', async (req, res) => {
     }
 
     const upstreamBody = {
-        model:     req.body.model || 'claude-sonnet-4-6',
+        model:      req.body.model || 'claude-sonnet-4-6',
         max_tokens: req.body.max_tokens || 2000,
-        system:    systemPrompt,
-        messages:  req.body.messages,
-        tools:     [{ type: 'web_search_20250305', name: 'web_search' }],
+        system:     systemPrompt,
+        messages:   req.body.messages,
+        tools:      [{ type: 'web_search_20250305', name: 'web_search' }],
     };
+
+    const anthropicHeaders = {
+        'Content-Type':      'application/json',
+        'x-api-key':         process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta':    'web-search-2025-03-05',
+    };
+
+    const callAnthropic = () => fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: anthropicHeaders,
+        body: JSON.stringify(upstreamBody),
+    });
 
     let upstream;
     try {
-        upstream = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'Content-Type':  'application/json',
-                'x-api-key':     process.env.ANTHROPIC_API_KEY,
-                'anthropic-version': '2023-06-01',
-                'anthropic-beta': 'web-search-2025-03-05',
-            },
-            body: JSON.stringify(upstreamBody),
-        });
+        upstream = await callAnthropic();
+        // Retry once on rate limit
+        if (upstream.status === 429) {
+            console.log('[claude] rate limited (429) — retrying in 10s');
+            await new Promise(r => setTimeout(r, 10000));
+            upstream = await callAnthropic();
+        }
     } catch (err) {
         return res.status(502).json({ error: { message: `Upstream fetch failed: ${err.message}` } });
     }
