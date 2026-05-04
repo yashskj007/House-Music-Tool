@@ -30,7 +30,7 @@
 ## Architecture — What Is Built
 
 ### Netlify Architecture
-- `netlify/functions/claude.js` — proxy for Anthropic API; reads `ANTHROPIC_API_KEY` from env; adds `anthropic-beta: web-search-2025-03-05` header when tools present; `exports.config = { background: true }`
+- `netlify/functions/claude.js` — ESM streaming proxy for Anthropic API; reads `ANTHROPIC_API_KEY` from env; forces `stream: true`; pipes SSE stream via TransformStream to avoid Netlify's 10s free-plan timeout; `export const config = { path: '/api/claude' }`; web search disabled (incompatible with free-plan timeout)
 - `netlify/functions/lastfm.js` — proxy for Last.fm API; reads `LASTFM_API_KEY` from env; passes all query params through
 - `netlify.toml` — sets `directory = "netlify/functions"`, `node_bundler = "esbuild"`
 - API key input fields removed from UI — keys live server-side only
@@ -159,3 +159,4 @@ Site updates at live URL within 60 seconds.
 | Day 13 | FIX 2: YouTube links → music.youtube.com/search, Spotify → /tracks tab, added Last.fm direct song page button. FIX 3: Anti-hallucination CRITICAL block added to CALL 1 and CALL 2 prompts; "Verify on streaming platforms" disclaimer added to every song card. |
 | Day 14 | Replaced two-call architecture with single call: web search enabled, 120s timeout, 3,000 max tokens, 6–8 results, all sources holistic, no source labels on cards, "Taking longer than expected. Please try again." on timeout. |
 | Day 15 | Netlify migration: created netlify/functions/claude.js and lastfm.js proxies, netlify.toml config. Removed API key input fields from UI. All API calls route through /.netlify/functions/. 200 req/day limit via localStorage. |
+| Day 16 | Fix 504: claude.js rewritten as ESM streaming function — pipes Anthropic SSE via TransformStream to browser, path /api/claude. callAPI in index.html updated to read SSE stream (text_delta events). Web search removed (incompatible with free plan). max_tokens 2000. |

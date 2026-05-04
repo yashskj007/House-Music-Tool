@@ -527,7 +527,7 @@
         localStorage.setItem('daily_req', JSON.stringify({ date: today, count }));
     }
 
-    async function callAPI(systemPrompt, userPrompt, maxTokens = 1400, tools = null, timeoutMs = 60000) {
+    async function callAPI(systemPrompt, userPrompt, maxTokens = 1400, tools = null, timeoutMs = 120000) {
         if (checkDailyLimit()) throw new Error("We have hit today's limit. Check back tomorrow!");
         incrementDailyCount();
 
@@ -538,16 +538,15 @@
             model: 'claude-sonnet-4-6',
             max_tokens: maxTokens,
             system: systemPrompt,
-            messages: [{ role: 'user', content: userPrompt }]
+            messages: [{ role: 'user', content: userPrompt }],
         };
-        if (tools) body.tools = tools;
 
         try {
-            const res = await fetch('/.netlify/functions/claude', {
+            const res = await fetch('/api/claude', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
-                signal: controller.signal
+                signal: controller.signal,
             });
 
             if (!res.ok) {
@@ -555,9 +554,32 @@
                 throw new Error(err?.error?.message || `API error ${res.status}`);
             }
 
-            const data = await res.json();
-            const textBlocks = (data?.content || []).filter(b => b.type === 'text').map(b => b.text);
-            return textBlocks.length ? textBlocks.join('\n') : '';
+            // Read SSE stream, accumulate text_delta events into full text
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+            let buf = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop();
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const raw = line.slice(6).trim();
+                    if (raw === '[DONE]') continue;
+                    try {
+                        const evt = JSON.parse(raw);
+                        if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+                            fullText += evt.delta.text;
+                        }
+                    } catch {}
+                }
+            }
+
+            return fullText;
         } catch (err) {
             if (err.name === 'AbortError') throw new Error('Taking longer than expected. Please try again.');
             throw err;
@@ -1286,9 +1308,9 @@ Laurent Garnier
 
         const subgenres = `Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, Soulful House, Vocal House, UK Garage, Bassline House, Acid House, Jackin House, Lo-Fi House, Minimal House, Nu-Disco House, French House, Balearic House, Disco House, Latin House, Brazilian House, Detroit House, NYC House, South African House, Gqom-adjacent, Rominimal, Deep Tech`;
 
-        const system = `You are an expert house music curator. Use weighted scoring across all available sources — the curated artist universe, Last.fm signals, and live web search results — to surface the most sonically precise recommendations. Only recommend real, verifiable songs.`;
+        const system = `You are an expert house music curator. Use weighted scoring across the curated artist universe and Last.fm signals to surface the most sonically precise recommendations. Only recommend real, verifiable songs.`;
 
-        const user = `Recommend 6–8 real house music tracks using weighted scoring across all sources.
+        const user = `Recommend 6–8 real house music tracks using weighted scoring.
 
 ${weightsBlock}
 
@@ -1305,9 +1327,9 @@ Energy: ${lastVibe.energyLevel} · BPM: ${lastVibe.bpmRange} · Mood: ${(lastVib
 ${lfmBlock}ARTIST UNIVERSE (1,771 priority artists):
 ${compactArtists}
 
-SOURCES: Draw holistically from all three — (1) the ARTIST_UNIVERSE above, (2) Last.fm similar artist signals, (3) live web search results. Pick the 6–8 best-scoring tracks regardless of source. Include mid-tier and underground artists — never default to only the top 40–50 most famous names.
+SOURCES: Draw from (1) the ARTIST_UNIVERSE above and (2) Last.fm similar artist signals. Pick the 6–8 best-scoring tracks. Include mid-tier and underground artists — never default to only the top 40–50 most famous names.
 
-CRITICAL — REAL TRACKS ONLY: Only recommend songs you are highly confident actually exist as released tracks. (1) Only recommend a song if it appears in your training data or web search results as a real released track. (2) Do not invent track names that sound plausible — only use real titles you are certain about. (3) If you are less than 90% confident a specific track exists, recommend a different confirmed track by the same artist instead. (4) For underground or emerging artists where you are unsure of specific track titles, use their most well-known confirmed track. (5) For web search results, only use track titles that appear in the actual search results.
+CRITICAL — REAL TRACKS ONLY: Only recommend songs you are highly confident actually exist as released tracks. (1) Only recommend a song if you have seen it referenced in your training data as a real released track. (2) Do not invent track names that sound plausible — only use real titles you are certain about. (3) If you are less than 90% confident a specific track exists, recommend a different confirmed track by the same artist instead. (4) For underground or emerging artists where you are unsure of specific track titles, use their most well-known confirmed track.
 
 SUBGENRES: ${subgenres}
 
@@ -1325,10 +1347,8 @@ Output ONLY a valid JSON array of 6–8 objects:
   }
 ]`;
 
-        const WEB_SEARCH_TOOL = [{ type: 'web_search_20250305', name: 'web_search' }];
-
         try {
-            const raw   = await callAPI(system, user, 3000, WEB_SEARCH_TOOL, 120000);
+            const raw   = await callAPI(system, user, 2000, null, 120000);
             const songs = parseJSON(raw);
             if (!Array.isArray(songs)) throw new Error('Unexpected response format — please try again.');
             renderSongs(songs, hasFreeText ? freeText : null);
