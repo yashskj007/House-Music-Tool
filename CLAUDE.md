@@ -29,11 +29,16 @@
 
 ## Architecture — What Is Built
 
-### Netlify Architecture
-- `netlify/functions/claude.js` — ESM streaming proxy for Anthropic API; reads `ANTHROPIC_API_KEY` from env; forces `stream: true`; pipes SSE stream via TransformStream to avoid Netlify's 10s free-plan timeout; `export const config = { path: '/api/claude' }`; web search disabled (incompatible with free-plan timeout)
-- `netlify/functions/lastfm.js` — proxy for Last.fm API; reads `LASTFM_API_KEY` from env; passes all query params through
-- `netlify.toml` — sets `directory = "netlify/functions"`, `node_bundler = "esbuild"`
+### Railway Architecture (current)
+- `server.js` — Express.js server; serves `index.html` at `/`; POST `/api/claude` proxies to Anthropic API with web search enabled (`web_search_20250305` tool + beta header) and SSE-streams response back; GET `/api/lastfm` proxies Last.fm API; GET `/api/daily-limit` returns in-memory daily usage count; enforces 200 req/day server-side
+- `package.json` — dependencies: express, node-fetch@2, cors; start script: `node server.js`
+- `ANTHROPIC_API_KEY` and `LASTFM_API_KEY` set as Railway environment variables
 - API key input fields removed from UI — keys live server-side only
+
+### Netlify Architecture (legacy — kept for reference)
+- `netlify/functions/claude.js` — ESM streaming proxy; web search disabled (free-plan timeout incompatible)
+- `netlify/functions/lastfm.js` — Last.fm proxy
+- `netlify.toml` — esbuild config
 
 ### Input Layer
 - Anthropic API key field (password, saved to localStorage)
@@ -163,3 +168,4 @@ Site updates at live URL within 60 seconds.
 | Day 17 | Debug blank results: added console.log in claude.js and callAPI/parseJSON, SSE error-event handling, buffer flush after stream end, JSON content-type fallback in callAPI, null guards in renderResults/renderDimensions. |
 | Day 18 | Fix parseJSON: capturing-group regex extracts inner content from ```json...``` fences cleanly; fallback strip/raw/brace/array strategies unchanged. Added console.log in analyseVibe after parseJSON to confirm renderResults/renderDimensions receive valid parsed object. |
 | Day 19 | Fix parseJSON bracket-scanner: guarded lastIndexOf('[') fallback so it only runs when array precedes any object in the text — prevents recommendations sub-array being returned as vibe object when analyseVibe JSON is truncated (was causing Array(3) \| vibeName: undefined). Fix findSongs/renderSongs field name mismatch: renamed s.prefMatches → s.dimensionMatches to match the prompt's dimensionMatches field. |
+| Day 20 | Railway backend: created server.js (Express, node-fetch@2, cors) + package.json. Routes: POST /api/claude (SSE stream, web search enabled), GET /api/lastfm, GET /api/daily-limit (in-memory 200/day server-side limit). Updated index.html Last.fm calls from /.netlify/functions/lastfm → /api/lastfm. Updated CLAUDE.md architecture section. |

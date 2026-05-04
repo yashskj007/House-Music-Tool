@@ -668,7 +668,7 @@
     // ── Last.fm ───────────────────────────────────────────────────
     async function fetchLastFmTrack(artist, title) {
         try {
-            const url = `/.netlify/functions/lastfm?method=track.getInfo&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&autocorrect=1`;
+            const url = `/api/lastfm?method=track.getInfo&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(title)}&autocorrect=1`;
             const res = await fetch(url);
             if (!res.ok) return null;
             const data = await res.json();
@@ -691,7 +691,7 @@
     async function fetchLastFmSimilar(tracks) {
         const results = await Promise.all(tracks.map(async ({ artist }) => {
             try {
-                const url = `/.netlify/functions/lastfm?method=artist.getSimilar&artist=${encodeURIComponent(artist)}&limit=8&autocorrect=1`;
+                const url = `/api/lastfm?method=artist.getSimilar&artist=${encodeURIComponent(artist)}&limit=8&autocorrect=1`;
                 const res = await fetch(url);
                 if (!res.ok) return null;
                 const data = await res.json();
