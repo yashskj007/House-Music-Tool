@@ -1251,7 +1251,7 @@ Laurent Garnier
 
 `;
 
-    // ── Step 2: Find songs (CALL 1 — fast, no web search) ───────────
+    // ── Find songs — single call, web search enabled ─────────────
     async function findSongs() {
         if (!lastVibe) return;
 
@@ -1337,9 +1337,9 @@ Laurent Garnier
 
         const subgenres = `Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, Soulful House, Vocal House, UK Garage, Bassline House, Acid House, Jackin House, Lo-Fi House, Minimal House, Nu-Disco House, French House, Balearic House, Disco House, Latin House, Brazilian House, Detroit House, NYC House, South African House, Gqom-adjacent, Rominimal, Deep Tech`;
 
-        const system = `You are an expert house music curator. Use weighted scoring across analysis dimensions and slider preferences to surface the most sonically precise recommendations from the curated artist universe and Last.fm signals. Only recommend real, verifiable songs.`;
+        const system = `You are an expert house music curator. Use weighted scoring across all available sources — the curated artist universe, Last.fm signals, and live web search results — to surface the most sonically precise recommendations. Only recommend real, verifiable songs.`;
 
-        const user = `Recommend exactly 6 real house music tracks using weighted scoring.
+        const user = `Recommend 6–8 real house music tracks using weighted scoring across all sources.
 
 ${weightsBlock}
 
@@ -1347,7 +1347,7 @@ WEIGHT A — 10-DIMENSION ANALYSIS:
 ${dimSummary}
 Instrumentation: ${instrSummary || 'not available'}
 
-WEIGHT B — SLIDER CALIBRATION:
+WEIGHT B — QUESTION CALIBRATION:
 beat_feel ${norm(questionAnswers.beat_feel)} (driving→percussive) · sound_texture ${norm(questionAnswers.sound_texture)} (warm/analog→polished/digital) · emotion_hypnosis ${norm(questionAnswers.emotion_hypnosis)} (hypnotic→melodic) · track_journey ${norm(questionAnswers.track_journey)} (steady groove→build/drop arc) · discovery_style ${norm(questionAnswers.discovery_style)} (trusted artists→sound-led/unknown)
 ${freeTextBlock}
 Context: ${lastVibe.vibeName} · Subgenres: ${(lastVibe.subgenres||[]).join(', ')}
@@ -1356,13 +1356,13 @@ Energy: ${lastVibe.energyLevel} · BPM: ${lastVibe.bpmRange} · Mood: ${(lastVib
 ${lfmBlock}ARTIST UNIVERSE (1,771 priority artists):
 ${compactArtists}
 
-SELECTION RULE: Pick the 6 best-scoring songs from ARTIST_UNIVERSE and Last.fm signals. Include mid-tier and underground artists — never default to only the top 40–50 most famous names.
+SOURCES: Draw holistically from all three — (1) the ARTIST_UNIVERSE above, (2) Last.fm similar artist signals, (3) live web search results. Pick the 6–8 best-scoring tracks regardless of source. Include mid-tier and underground artists — never default to only the top 40–50 most famous names.
 
-CRITICAL — REAL TRACKS ONLY: Only recommend songs you are highly confident actually exist as released tracks. (1) Only recommend a song if you have seen it referenced in your training data as a real released track. (2) Do not invent track names that sound plausible — only use real titles you are certain about. (3) If you are less than 90% confident a specific track exists, recommend a different confirmed track by the same artist instead. (4) For underground or emerging artists where you are unsure of specific track titles, use their most well-known confirmed track. (5) Never fabricate titles.
+CRITICAL — REAL TRACKS ONLY: Only recommend songs you are highly confident actually exist as released tracks. (1) Only recommend a song if it appears in your training data or web search results as a real released track. (2) Do not invent track names that sound plausible — only use real titles you are certain about. (3) If you are less than 90% confident a specific track exists, recommend a different confirmed track by the same artist instead. (4) For underground or emerging artists where you are unsure of specific track titles, use their most well-known confirmed track. (5) For web search results, only use track titles that appear in the actual search results.
 
 SUBGENRES: ${subgenres}
 
-Output ONLY a valid JSON array of exactly 6 objects:
+Output ONLY a valid JSON array of 6–8 objects:
 [
   {
     "title": "Exact Song Title",
@@ -1376,15 +1376,16 @@ Output ONLY a valid JSON array of exactly 6 objects:
   }
 ]`;
 
+        const WEB_SEARCH_TOOL = [{ type: 'web_search_20250305', name: 'web_search' }];
+
         try {
-            const raw   = await callAPI(system, user, 3200, null, 60000);
+            const raw   = await callAPI(system, user, 3000, WEB_SEARCH_TOOL, 120000);
             const songs = parseJSON(raw);
             if (!Array.isArray(songs)) throw new Error('Unexpected response format — please try again.');
             renderSongs(songs, hasFreeText ? freeText : null);
-            runFreshDiscoveries(songs);
         } catch (err) {
             const msg = err.message.includes('timed out')
-                ? 'Taking longer than expected — the music universe is vast. Please try again.'
+                ? 'Taking longer than expected. Please try again.'
                 : err.message;
             document.getElementById('songsArea').innerHTML =
                 `<div class="card"><div class="error">${esc(msg)}</div></div>`;
@@ -1392,90 +1393,6 @@ Output ONLY a valid JSON array of exactly 6 objects:
             clearInterval(cycleTimer);
             btn.disabled = false;
             inner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Find My Resonance`;
-        }
-    }
-
-    // ── CALL 2: background web search for fresh discoveries ───────────
-    async function runFreshDiscoveries(existingSongs) {
-        if (!lastVibe) return;
-        const container = document.querySelector('#songsArea .song-cards');
-        if (!container) return;
-
-        container.insertAdjacentHTML('beforeend',
-            `<div id="fresh-loader" style="display:flex;align-items:center;gap:10px;padding:14px 0;border-top:1px solid rgba(201,168,76,0.08);color:var(--muted);font-size:11.5px;letter-spacing:0.04em">
-                <div class="spinner" style="width:12px;height:12px;border-width:1.5px;flex-shrink:0"></div>
-                Searching for fresh discoveries via web…
-            </div>`);
-
-        try {
-            const existingList = existingSongs.map(s => `${s.artist} — ${s.title}`).join('\n');
-
-            const system = `You are an expert house music curator finding fresh current tracks via web search.`;
-            const user   = `Find 1–2 fresh house music tracks via exactly 1 web search. Do NOT repeat any tracks listed below.
-
-Already recommended — exclude these:
-${existingList}
-
-Listener profile: ${lastVibe.vibeName} · ${(lastVibe.subgenres||[]).join(', ')} · ${lastVibe.energyLevel} · BPM ${lastVibe.bpmRange}
-
-Search for: "[primary subgenre] new release Beatport OR Traxsource 2025"
-
-Return 1–2 genuinely different tracks from the search results that fit this listener's style.
-
-CRITICAL — REAL TRACKS ONLY: Only use track titles that appear in the actual search results. Do not invent or guess titles. If a result is ambiguous, skip it and use only confirmed tracks.
-
-Output ONLY a valid JSON array of 1–2 objects:
-[
-  {
-    "title": "Track Title",
-    "artist": "Artist Name",
-    "subgenre": "specific house subgenre",
-    "sceneEra": "one-line context",
-    "why": "One sentence: why this is a fresh discovery that fits this listener."
-  }
-]`;
-
-            const WEB_SEARCH_TOOL = [{ type: 'web_search_20250305', name: 'web_search' }];
-            const raw        = await callAPI(system, user, 1500, WEB_SEARCH_TOOL, 120000);
-            const freshSongs = parseJSON(raw);
-
-            if (!Array.isArray(freshSongs) || freshSongs.length === 0) return;
-
-            const existingSet = new Set(existingSongs.map(s => (s.artist + '|' + s.title).toLowerCase()));
-            const newSongs    = freshSongs.filter(s => !existingSet.has((s.artist + '|' + s.title).toLowerCase()));
-            if (newSongs.length === 0) return;
-
-            const freshCards = newSongs.map(s => `
-                <div class="song-card">
-                    <div class="song-num" style="letter-spacing:0.18em">✦ Fresh Discovery</div>
-                    <div class="song-title">${esc(s.title)}</div>
-                    <div class="song-artist">${esc(s.artist)}</div>
-                    ${s.subgenre ? `<div class="song-subgenre">${esc(s.subgenre)}</div>` : ''}
-                    ${s.sceneEra ? `<div class="song-scene">${esc(s.sceneEra)}</div>` : ''}
-                    <div class="song-why">${esc(s.why)}</div>
-                    <div class="song-links">
-                        <a class="link-btn link-yt" href="${searchUrl('yt', s.artist, s.title)}" target="_blank" rel="noopener">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>YouTube</a>
-                        <a class="link-btn link-sp" href="${searchUrl('sp', s.artist, s.title)}" target="_blank" rel="noopener">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 0 1 .207.857zm1.223-2.722a.779.779 0 0 1-1.071.257c-2.687-1.652-6.785-2.131-9.965-1.166a.779.779 0 0 1-.435-1.493c3.632-1.057 8.147-.546 11.214 1.331a.779.779 0 0 1 .257 1.071zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 1 1-.543-1.79c3.532-1.072 9.404-.865 13.115 1.337a.935.935 0 0 1-.955 1.61z"/></svg>Spotify</a>
-                        <a class="link-btn link-lfm" href="${searchUrl('lfm', s.artist, s.title)}" target="_blank" rel="noopener">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M10.96 2C5.991 2 2 5.99 2 10.96c0 4.97 3.99 8.96 8.96 8.96 4.97 0 8.96-3.99 8.96-8.96C19.92 5.99 15.93 2 10.96 2zm3.44 12.71l-1.15-2.77-1.85 2.1-2.01-4.21-.85 2.88H6.83l.98-3.34 1.14.44 1.29-4.36 1.94 4.05 1.86-2.1 1.65 3.97 1.14-1.81h1.34l-2.72 5.15z"/></svg>Last.fm</a>
-                    </div>
-                    <div class="song-verify">Verify on streaming platforms before listening.</div>
-                </div>`).join('');
-
-            const divider = `<div style="padding:12px 0 4px;border-top:1px solid rgba(201,168,76,0.12)">
-                <div class="section-lbl" style="margin-bottom:0">✦ Fresh Discoveries — via live web search</div>
-            </div>`;
-
-            const c = document.querySelector('#songsArea .song-cards');
-            if (c) c.insertAdjacentHTML('beforeend', divider + freshCards);
-
-        } catch (_) {
-            // Silently fail — user already has CALL 1 results
-        } finally {
-            const loader = document.getElementById('fresh-loader');
-            if (loader) loader.remove();
         }
     }
 

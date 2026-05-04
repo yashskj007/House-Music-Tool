@@ -65,20 +65,16 @@
 - **Weight C** — Free Text Description: 0% (absent) / 30% (when user types something)
 - Claude scores each candidate across all active weights; each song card shows a `weightMatch` explanation
 
-### Recommendation Layer — Two-Call Architecture
-**CALL 1** (fast, always runs):
-- No web search; uses ARTIST_UNIVERSE (compact, headers stripped at runtime) + Last.fm signals
-- 60s timeout, 3,200 max tokens
-- Returns exactly 6 weighted recommendations; shown immediately on success
+### Recommendation Layer — Single Call Architecture
+**Single call** (web search enabled):
+- Web search tool enabled; draws holistically from ARTIST_UNIVERSE + Last.fm signals + live web search
+- 120s timeout, 3,000 max tokens
+- Returns 6–8 weighted recommendations; best sonic match wins regardless of source
+- All cards identical — no source labels or Fresh Discovery labels
 - Cycling loader: "Analysing your vibe DNA…" → "Searching the music universe…" → "Calibrating recommendations…" → "Almost there…" (8s per message)
+- Timeout error: "Taking longer than expected. Please try again."
 
-**CALL 2** (background, runs after CALL 1):
-- Web search enabled (1 search), 120s timeout, 1,500 max tokens
-- Returns 1–2 fresh discoveries not in the CALL 1 set
-- Appended as "✦ Fresh Discovery" cards with a section divider
-- Silent fail — user already has CALL 1 results if CALL 2 times out or errors
-
-**Song card fields:** title · artist · subgenre tag · scene/era · instruments · weightMatch · why · YouTube + Spotify links
+**Song card fields:** title · artist · subgenre tag · scene/era · instruments · weightMatch · why · YouTube + Spotify + Last.fm links
 
 ---
 
@@ -153,3 +149,4 @@ Site updates at live URL within 60 seconds.
 | Day 11 | Two-call architecture: CALL 1 (no web search, 60s timeout) returns 6 songs immediately; CALL 2 (background, web search, 120s) appends 1-2 "Fresh Discovery" cards with divider. Failures in CALL 2 are silent. |
 | Day 12 | Replaced 5 sliders with 5 labeled option questions (5 cards each, 1–5 value). Questions: Beat Feel, Sound Texture, Emotion vs Hypnosis, Track Journey, Discovery Style. Button hidden until all 5 answered with progress indicator. Norm formula updated to (v-3)/2 for [-1,+1] range. Weight B prompt updated with new dimension keys. |
 | Day 13 | FIX 2: YouTube links → music.youtube.com/search, Spotify → /tracks tab, added Last.fm direct song page button. FIX 3: Anti-hallucination CRITICAL block added to CALL 1 and CALL 2 prompts; "Verify on streaming platforms" disclaimer added to every song card. |
+| Day 14 | Replaced two-call architecture with single call: web search enabled, 120s timeout, 3,000 max tokens, 6–8 results, all sources holistic, no source labels on cards, "Taking longer than expected. Please try again." on timeout. |
