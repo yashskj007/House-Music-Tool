@@ -50,18 +50,35 @@
 10. Dancefloor Function
 11. Instrumentation (NEW — see below)
 
-### Preference Layer (5 sliders, range 1-7)
+### Preference Layer (5 sliders + free text, fires on "Find My Resonance")
 1. **Groove Architecture** — Locked/driving (1) → Swung/syncopated/percussive (7)
 2. **Production Texture** — Warm/raw/organic/analog (1) → Clean/bright/polished/surgical (7)
 3. **Harmonic Depth** — Hypnotic/minimal/repetitive (1) → Melodic/harmonic/emotionally lifted (7)
 4. **Structural Payoff** — Steady groove throughout (1) → Strong build/breakdown/release arc (7)
 5. **Discovery Mode** — Trusted artist/label/scene (1) → Unfamiliar but sonically right (7)
-- Each slider normalised to [-1, +1] before passing to recommendation prompt
+- Each slider normalised to [-1, +1] and passed as Weight B to recommendation prompt
+- **"Describe Your Moment"** free text field (optional) — when filled, activates Weight C (30%)
 
-### Recommendation Layer (fires on "Find My Songs")
-- 6-8 songs recommended
-- Each card: title, artist, subgenre, instrument profile, why it matches, YouTube link, Spotify link
-- Must include artists from ALL tiers — not just top 40-50 famous names
+### Weighted Scoring System
+- **Weight A** — 10-Dimension Analysis: 57% (no free text) / 40% (with free text)
+- **Weight B** — 5 Slider Calibration: 43% (no free text) / 30% (with free text)
+- **Weight C** — Free Text Description: 0% (absent) / 30% (when user types something)
+- Claude scores each candidate across all active weights; each song card shows a `weightMatch` explanation
+
+### Recommendation Layer — Two-Call Architecture
+**CALL 1** (fast, always runs):
+- No web search; uses ARTIST_UNIVERSE (compact, headers stripped at runtime) + Last.fm signals
+- 60s timeout, 3,200 max tokens
+- Returns exactly 6 weighted recommendations; shown immediately on success
+- Cycling loader: "Analysing your vibe DNA…" → "Searching the music universe…" → "Calibrating recommendations…" → "Almost there…" (8s per message)
+
+**CALL 2** (background, runs after CALL 1):
+- Web search enabled (1 search), 120s timeout, 1,500 max tokens
+- Returns 1–2 fresh discoveries not in the CALL 1 set
+- Appended as "✦ Fresh Discovery" cards with a section divider
+- Silent fail — user already has CALL 1 results if CALL 2 times out or errors
+
+**Song card fields:** title · artist · subgenre tag · scene/era · instruments · weightMatch · why · YouTube + Spotify links
 
 ---
 
