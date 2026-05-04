@@ -554,31 +554,49 @@
                 throw new Error(err?.error?.message || `API error ${res.status}`);
             }
 
+            const contentType = res.headers.get('content-type') || '';
+
+            // Fallback: if proxy returns plain JSON (non-streaming), handle it directly
+            if (contentType.includes('application/json')) {
+                const data = await res.json();
+                const textBlocks = (data?.content || []).filter(b => b.type === 'text').map(b => b.text);
+                return textBlocks.join('\n');
+            }
+
             // Read SSE stream, accumulate text_delta events into full text
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let fullText = '';
             let buf = '';
 
+            const processLine = (line) => {
+                if (!line.startsWith('data: ')) return;
+                const raw = line.slice(6).trim();
+                if (!raw || raw === '[DONE]') return;
+                try {
+                    const evt = JSON.parse(raw);
+                    if (evt.type === 'error') throw new Error(evt.error?.message || 'Streaming error from API');
+                    if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+                        fullText += evt.delta.text;
+                    }
+                } catch (e) {
+                    if (e.message.includes('Streaming error')) throw e;
+                }
+            };
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
                 buf += decoder.decode(value, { stream: true });
                 const lines = buf.split('\n');
-                buf = lines.pop();
-                for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue;
-                    const raw = line.slice(6).trim();
-                    if (raw === '[DONE]') continue;
-                    try {
-                        const evt = JSON.parse(raw);
-                        if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
-                            fullText += evt.delta.text;
-                        }
-                    } catch {}
-                }
+                buf = lines.pop(); // keep incomplete last line in buffer
+                for (const line of lines) processLine(line);
             }
+            // Flush any remaining buffered line
+            if (buf.trim()) processLine(buf.trim());
 
+            console.log('[callAPI] fullText length:', fullText.length, '| preview:', fullText.slice(0, 80));
+            if (!fullText) throw new Error('Empty response from API — please try again.');
             return fullText;
         } catch (err) {
             if (err.name === 'AbortError') throw new Error('Taking longer than expected. Please try again.');
@@ -589,6 +607,8 @@
     }
 
     function parseJSON(raw) {
+        console.log('[parseJSON] input length:', raw?.length, '| preview:', String(raw).slice(0, 120));
+        if (!raw || !raw.trim()) throw new Error('Empty response received — please try again.');
         // Strip markdown code fences so ```json wrapping doesn't break parsing
         const stripped = raw.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
 
@@ -783,6 +803,7 @@ Return exactly this structure:
 
     // ── Render results ────────────────────────────────────────────
     function renderResults(v) {
+        if (!v || typeof v !== 'object') { console.warn('[renderResults] invalid vibe object:', v); return; }
         const eCol = { Low: 'var(--muted)', Medium: 'var(--accent)', High: 'var(--text)', Peak: '#F87171' };
         const col  = eCol[v.energyLevel] || 'var(--text)';
 
@@ -829,9 +850,10 @@ Return exactly this structure:
 
     // ── Render 10-dimension scorecard + instrument table ──────────
     function renderDimensions(v, lfmData) {
-        const dims = v.dimensions || [];
+        if (!v || typeof v !== 'object') { console.warn('[renderDimensions] invalid vibe object:', v); return; }
+        const dims = Array.isArray(v.dimensions) ? v.dimensions : [];
         const dimMap = {};
-        dims.forEach(d => { dimMap[d.id] = d; });
+        dims.forEach(d => { if (d && d.id) dimMap[d.id] = d; });
 
         const rowsHtml = DIMENSION_META.map(meta => {
             const d = dimMap[meta.id] || { value: '—', detail: '' };

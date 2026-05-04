@@ -8,7 +8,9 @@ export default async (req) => {
         return new Response('Bad Request', { status: 400 });
     }
 
-    // Strip tools — web search disabled on free plan, streaming makes it moot
+    console.log('[claude] model:', body.model, 'max_tokens:', body.max_tokens,
+        'system_len:', body.system?.length, 'msg_len:', body.messages?.[0]?.content?.length);
+
     const upstreamBody = {
         model: body.model || 'claude-sonnet-4-6',
         max_tokens: body.max_tokens || 2000,
@@ -27,8 +29,12 @@ export default async (req) => {
         body: JSON.stringify(upstreamBody),
     });
 
+    console.log('[claude] upstream status:', upstream.status,
+        'content-type:', upstream.headers.get('content-type'));
+
     if (!upstream.ok) {
         const err = await upstream.json().catch(() => ({}));
+        console.error('[claude] upstream error:', JSON.stringify(err));
         return new Response(
             JSON.stringify({ error: err.error || { message: `Upstream error ${upstream.status}` } }),
             { status: upstream.status, headers: { 'Content-Type': 'application/json' } }
