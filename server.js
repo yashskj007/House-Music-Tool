@@ -130,16 +130,13 @@ app.post('/api/claude', async (req, res) => {
     let systemPrompt = req.body.system || '';
 
     if (detectedSubgenres.length > 0) {
-        const bucketKey   = subgenresToBucketKey(detectedSubgenres);
-        const bucketList  = (artistsByBucket[bucketKey] || []).slice(0, 80);
-        // Always pad with a handful of chart leaders for breadth
-        const chartList   = (artistsByBucket['chart_leaders'] || []).slice(0, 20);
-        const niche       = [...new Set([...bucketList, ...chartList])].slice(0, 100);
+        const bucketKey  = subgenresToBucketKey(detectedSubgenres);
+        const niche      = (artistsByBucket[bucketKey] || []).slice(0, 80);
 
         if (niche.length > 0) {
             systemPrompt +=
-                `\n\nNICHE ARTIST REFERENCE — ${bucketKey.replace(/_/g, ' ')} specialists (${niche.length} artists from curated database):` +
-                `\nWeb search is your primary source. Additionally ensure you do not miss these niche artists who perfectly fit this subgenre:` +
+                `\n\nNICHE ARTIST REFERENCE — ${bucketKey.replace(/_/g, ' ')} (${niche.length} curated artists):` +
+                `\nWeb search is primary. Also consider these niche specialists:` +
                 `\n${niche.join(', ')}`;
             console.log(`[claude] injected ${niche.length} artists for bucket "${bucketKey}"`);
         }
@@ -197,6 +194,8 @@ app.post('/api/claude', async (req, res) => {
         .map(b => b.text)
         .join('\n');
 
+    const totalInputChars = (upstreamBody.system || '').length + JSON.stringify(upstreamBody.messages).length;
+    console.log('[claude] total input chars sent to Anthropic:', totalInputChars);
     console.log('[claude] sending content length:', fullText.length, '| preview:', fullText.slice(0, 120));
     res.json({ content: fullText });
 });

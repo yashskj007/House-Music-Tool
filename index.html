@@ -704,61 +704,62 @@
 
         let lfmContext = '';
         if (lfmData && lfmData.some(Boolean)) {
-            lfmContext = '\n\nLast.fm data (use for Listener Profile and Scene Positioning dimensions):\n';
+            lfmContext = '\n\nLast.fm data:\n';
             lfmData.forEach((d, i) => {
                 if (!d) return;
-                lfmContext += `${i + 1}. ${d.artist} - ${d.title}: ${d.listeners.toLocaleString()} listeners, ${d.playcount.toLocaleString()} plays. Tags: ${d.tags.join(', ') || 'n/a'}\n`;
+                lfmContext += `${i + 1}. ${d.artist} - ${d.title}: ${d.listeners.toLocaleString()} listeners. Tags: ${d.tags.join(', ') || 'n/a'}\n`;
             });
         }
 
-        const system = `You are an expert house music curator, DJ, and cultural analyst with encyclopaedic knowledge of electronic music subgenres, labels, scenes, and culture.`;
+        const system = `You are a house music curator and DJ with deep knowledge of subgenres, labels, and club culture.`;
 
-        const user = `Analyse these tracks across 10 dimensions plus an instrument profile, and return ONLY valid JSON — no markdown, no prose outside the JSON.
+        const user = `Analyse these tracks across 10 dimensions and instrument profile. Return ONLY valid JSON.
 
 Tracks:
 ${trackList}${lfmContext}
 
-Return exactly this structure:
 {
-  "vibeName": "Creative evocative name (e.g. 'Afterhours Deep Seeker')",
-  "vibeDNA": "A rich 3-4 sentence paragraph synthesising the listener's overall taste fingerprint across all 5 songs.",
+  "vibeName": "Evocative short name",
+  "vibeDNA": "3-4 sentence taste fingerprint",
   "dimensions": [
-    { "id": "tempo",      "value": "e.g. '124-128 BPM · deep swing'",         "detail": "One sentence on rhythmic feel and groove philosophy." },
-    { "id": "harmonic",   "value": "e.g. 'Minor modes · dark tension'",        "detail": "One sentence on key preferences and harmonic language." },
-    { "id": "texture",    "value": "e.g. 'Dense layers · analogue warmth'",    "detail": "One sentence on layering density and sound design philosophy." },
-    { "id": "emotional",  "value": "e.g. 'Slow burn to catharsis'",            "detail": "One sentence on the emotional journey these tracks create." },
-    { "id": "vocal",      "value": "e.g. 'Sparse · processed · hypnotic'",     "detail": "One sentence on vocal style and processing." },
-    { "id": "production", "value": "e.g. '2010s Berlin · hardware-driven'",    "detail": "One sentence on production era and synthesis approach." },
-    { "id": "geographic", "value": "e.g. 'Berlin / Ibiza hybrid'",             "detail": "One sentence on scene origins and club culture ties." },
-    { "id": "scene",      "value": "e.g. 'Deep underground · Berghain circle'","detail": "One sentence on underground vs mainstream positioning." },
-    { "id": "listener",   "value": "Listener archetype${lfmData && lfmData.some(Boolean) ? ' (use real Last.fm listener counts)' : ''}",  "detail": "One sentence on who listens to these tracks${lfmData && lfmData.some(Boolean) ? ', using Last.fm data' : ''}." },
-    { "id": "dancefloor", "value": "e.g. '3am peak · intimate rooms'",         "detail": "One sentence on time of night, venue size, floor energy." }
+    { "id": "tempo",      "value": "BPM & groove",      "detail": "Rhythmic feel." },
+    { "id": "harmonic",   "value": "Keys & modes",       "detail": "Harmonic language." },
+    { "id": "texture",    "value": "Layers & design",    "detail": "Sonic density." },
+    { "id": "emotional",  "value": "Emotional arc",      "detail": "Emotional journey." },
+    { "id": "vocal",      "value": "Vocal style",        "detail": "Vocal use." },
+    { "id": "production", "value": "Era & synthesis",    "detail": "Production era." },
+    { "id": "geographic", "value": "City/region",        "detail": "Cultural origins." },
+    { "id": "scene",      "value": "Scene positioning",  "detail": "Underground level." },
+    { "id": "listener",   "value": "Listener archetype${lfmData && lfmData.some(Boolean) ? ' (use Last.fm counts)' : ''}", "detail": "Who listens." },
+    { "id": "dancefloor", "value": "Time & venue",       "detail": "Floor energy." }
   ],
   "instrumentProfile": [
-    { "name": "Kick drum & sub bass",                                 "prominence": "None | Low | Medium | High" },
-    { "name": "Hi-hats, cymbals & percussion",                        "prominence": "None | Low | Medium | High" },
-    { "name": "Bassline (melodic bass)",                              "prominence": "None | Low | Medium | High" },
-    { "name": "Synthesizer pads & chords",                            "prominence": "None | Low | Medium | High" },
-    { "name": "Piano & keys",                                         "prominence": "None | Low | Medium | High" },
-    { "name": "Organic percussion (congas, bongos, shakers, djembe)", "prominence": "None | Low | Medium | High" },
-    { "name": "Strings & orchestral elements",                        "prominence": "None | Low | Medium | High" },
-    { "name": "Vocals (lead & backing)",                              "prominence": "None | Low | Medium | High" },
-    { "name": "Guitar (acoustic or electric)",                        "prominence": "None | Low | Medium | High" },
-    { "name": "Trumpet, brass & wind instruments",                    "prominence": "None | Low | Medium | High" },
-    { "name": "Flute & woodwind",                                     "prominence": "None | Low | Medium | High" },
-    { "name": "Marimba & mallet instruments",                         "prominence": "None | Low | Medium | High" }
+    {"name":"Kick & sub bass","prominence":"None|Low|Medium|High"},
+    {"name":"Hi-hats & percussion","prominence":"None|Low|Medium|High"},
+    {"name":"Bassline (melodic)","prominence":"None|Low|Medium|High"},
+    {"name":"Synth pads & chords","prominence":"None|Low|Medium|High"},
+    {"name":"Piano & keys","prominence":"None|Low|Medium|High"},
+    {"name":"Organic percussion","prominence":"None|Low|Medium|High"},
+    {"name":"Strings & orchestral","prominence":"None|Low|Medium|High"},
+    {"name":"Vocals","prominence":"None|Low|Medium|High"},
+    {"name":"Guitar","prominence":"None|Low|Medium|High"},
+    {"name":"Brass & wind","prominence":"None|Low|Medium|High"},
+    {"name":"Flute & woodwind","prominence":"None|Low|Medium|High"},
+    {"name":"Marimba & mallets","prominence":"None|Low|Medium|High"}
   ],
-  "subgenres": ["subgenre1", "subgenre2", "subgenre3"],
-  "energyLevel": "Low | Medium | High | Peak",
-  "bpmRange": "e.g. 122-128 BPM",
-  "moodTags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+  "subgenres": ["s1","s2","s3"],
+  "energyLevel": "Low|Medium|High|Peak",
+  "bpmRange": "122-128 BPM",
+  "moodTags": ["t1","t2","t3"],
   "recommendations": [
-    { "artist": "Name", "reason": "One sentence" },
-    { "artist": "Name", "reason": "One sentence" },
-    { "artist": "Name", "reason": "One sentence" }
+    {"artist":"Name","reason":"One sentence"},
+    {"artist":"Name","reason":"One sentence"},
+    {"artist":"Name","reason":"One sentence"}
   ],
-  "clubScene": "1-2 evocative sentences on ideal venue, time of night, and dancefloor energy"
+  "clubScene": "1-2 sentences on venue and energy"
 }`;
+
+        console.log('[analyseVibe] prompt chars:', (system + user).length);
 
         try {
             const raw  = await callAPI(system, user, 3200);
@@ -1028,7 +1029,7 @@ Return exactly this structure:
         }
         if (_lfmSimilar.length) {
             lfmRec.push('\nLAST.FM SIMILAR ARTISTS:');
-            _lfmSimilar.forEach(s => lfmRec.push(`  ${s.artist} → ${s.similar.join(', ')}`));
+            _lfmSimilar.forEach(s => lfmRec.push(`  ${s.artist} → ${s.similar.slice(0, 5).join(', ')}`));
         }
         const lfmBlock = lfmRec.length ? lfmRec.join('\n') + '\n\n' : '';
 
@@ -1041,9 +1042,9 @@ Return exactly this structure:
             ? `\nWEIGHT C — FREE TEXT (30%):\nParse for mood keywords, artist references, activity context, energy, scene:\n"${freeText}"\n`
             : '';
 
-        const subgenres = `Chicago House, Deep House, Tech House, Afro House, Afro Tech, Melodic House, Progressive House, Organic House, Tribal House, Amapiano-adjacent, Soulful House, Vocal House, UK Garage, Bassline House, Acid House, Jackin House, Lo-Fi House, Minimal House, Nu-Disco House, French House, Balearic House, Disco House, Latin House, Brazilian House, Detroit House, NYC House, South African House, Gqom-adjacent, Rominimal, Deep Tech`;
+        const subgenres = `Deep House, Tech House, Afro House, Melodic House, Progressive House, Organic House, Amapiano, Soulful House, Vocal House, UK Garage, Acid House, Jackin House, Minimal House, Nu-Disco, Balearic, Disco House, Latin House, Detroit House`;
 
-        const system = `You are an expert house music curator. Use weighted scoring across the curated artist universe and Last.fm signals to surface the most sonically precise recommendations. Only recommend real, verifiable songs.`;
+        const system = `You are an expert house music curator. Recommend real, verifiable songs using weighted scoring across artist signals and Last.fm data.`;
 
         const user = `Recommend 6–8 real house music tracks using weighted scoring.
 
@@ -1078,6 +1079,8 @@ Output ONLY a valid JSON array of 6–8 objects:
     "dimensionMatches": ["one or two dimension labels"]
   }
 ]`;
+
+        console.log('[findSongs] prompt chars:', (system + user).length, '(server injects up to 80 artists separately)');
 
         try {
             const raw   = await callAPI(system, user, 2000, null, 120000, { subgenres: lastVibe.subgenres || [] });
