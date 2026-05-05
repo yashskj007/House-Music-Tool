@@ -104,6 +104,19 @@ function getNicheArtists(subgenres) {
     return (artistsByBucket[bucketKey] || []).slice(0, 30);
 }
 
+// Discovery 1: Last.fm tag top tracks — no Anthropic call, ~500ms per tag
+async function fetchLastFmTagTracks(tag) {
+    try {
+        const url = `https://ws.audioscrobbler.com/2.0/?method=tag.gettoptracks&tag=${encodeURIComponent(tag)}&limit=20&api_key=${process.env.LASTFM_API_KEY}&format=json`;
+        const res = await fetch(url);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.tracks?.track || [])
+            .map(t => ({ artist: t.artist?.name || '', title: t.name || '', subgenre: tag }))
+            .filter(t => t.artist && t.title);
+    } catch { return []; }
+}
+
 function unwrapArray(v) {
     if (Array.isArray(v)) return v;
     if (v && typeof v === 'object') {
@@ -285,7 +298,6 @@ app.post('/api/recommend', async (req, res) => {
     const { vibe = {}, preferences = {} } = req.body;
     const hasFreeText = Boolean(preferences.freeText && preferences.freeText.trim());
     const subgenres = vibe.dominant_subgenres || vibe.subgenres || [];
-    const dominantSubgenre = subgenres.slice(0, 2).join(', ') || 'house';
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -294,6 +306,9 @@ app.post('/api/recommend', async (req, res) => {
 
     const keepalive = setInterval(() => { try { res.write(': keepalive\n\n'); } catch (e) { clearInterval(keepalive); } }, 8000);
     req.on('close', () => clearInterval(keepalive));
+
+    // Similar artists passed from client (fetched during analysis phase)
+    const lfmSimilar = Array.isArray(req.body.lfmSimilar) ? req.body.lfmSimilar : [];
 
     try {
         // Agent 7: Preference Interpreter
@@ -310,80 +325,48 @@ app.post('/api/recommend', async (req, res) => {
         }), 250, false, 25000);
         sendSSE(res, { step: 'prefs', status: 'done', label: 'Preferences mapped', elapsed: Date.now() - t7 });
 
-        // Agent 8: Beatport Scout — graceful failure, pipeline continues
-        await delay(2000);
-        sendSSE(res, { step: 'beatport', status: 'active', label: 'Scouting Beatport...' });
+        // Discovery 1: Last.fm tag top tracks — parallel, ~1s total, no Anthropic call
+        sendSSE(res, { step: 'lastfm_tags', status: 'active', label: 'Finding subgenre tracks...' });
         const t8 = Date.now();
-        const a8System = `Search Beatport for 5 real released House tracks matching this subgenre. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
-        let beatportCandidates = [];
-        try {
-            beatportCandidates = unwrapArray(await callAgentWithTimeout(a8System, `Dominant subgenre: ${dominantSubgenre}\nVibe: ${vibe.vibeDNA || ''}`, 600, true, 55000));
-            sendSSE(res, { step: 'beatport', status: 'done', label: `Beatport scouted (${beatportCandidates.length} tracks)`, elapsed: Date.now() - t8 });
-        } catch (err) {
-            console.warn('[recommend] Agent 8 (Beatport) failed:', err.message);
-            sendSSE(res, { step: 'beatport', status: 'warn', label: 'Beatport scout slow — continuing with other sources', elapsed: Date.now() - t8 });
-        }
+        const tagsToSearch = subgenres.slice(0, 2).filter(Boolean);
+        const tagResults = tagsToSearch.length
+            ? await Promise.all(tagsToSearch.map(tag => fetchLastFmTagTracks(tag)))
+            : [];
+        const tagCandidates = tagResults.flat();
+        console.log('[recommend] Last.fm tag tracks:', tagCandidates.length, 'from tags:', tagsToSearch);
+        sendSSE(res, { step: 'lastfm_tags', status: 'done', label: `${tagCandidates.length} subgenre tracks found`, elapsed: Date.now() - t8 });
 
-        // Agent 9: Traxsource Scout — graceful failure
-        await delay(5000);
-        sendSSE(res, { step: 'traxsource', status: 'active', label: 'Scouting Traxsource...' });
-        const t9 = Date.now();
-        const a9System = `Search Traxsource for 5 real released House tracks matching this subgenre. Include underground artists. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
-        let traxsourceCandidates = [];
-        try {
-            traxsourceCandidates = unwrapArray(await callAgentWithTimeout(a9System, `Dominant subgenre: ${dominantSubgenre}\nVibe DNA: ${vibe.vibeDNA || ''}`, 600, true, 55000));
-            sendSSE(res, { step: 'traxsource', status: 'done', label: `Traxsource scouted (${traxsourceCandidates.length} tracks)`, elapsed: Date.now() - t9 });
-        } catch (err) {
-            console.warn('[recommend] Agent 9 (Traxsource) failed:', err.message);
-            sendSSE(res, { step: 'traxsource', status: 'warn', label: 'Traxsource scout slow — continuing with other sources', elapsed: Date.now() - t9 });
-        }
+        // Discovery 2: Last.fm similar artists — already cached from analysis phase, instant
+        sendSSE(res, { step: 'lastfm_similar', status: 'active', label: 'Finding similar tracks...' });
+        const similarArtists = [...new Set(lfmSimilar.flatMap(x => x.similar || []))];
+        console.log('[recommend] similar artists from Last.fm:', similarArtists.length);
+        sendSSE(res, { step: 'lastfm_similar', status: 'done', label: `${similarArtists.length} similar artists identified`, elapsed: 0 });
 
-        // Agent 10: Resident Advisor Scout — graceful failure
-        await delay(5000);
-        sendSSE(res, { step: 'ra', status: 'active', label: 'Scouting Resident Advisor...' });
-        const t10 = Date.now();
-        const a10System = `Search Resident Advisor for 5 real released House tracks matching this taste profile. Include emerging artists. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
-        let raCandidates = [];
-        try {
-            raCandidates = unwrapArray(await callAgentWithTimeout(a10System, `Vibe DNA: ${vibe.vibeDNA || ''}\nPreference: ${JSON.stringify(prefProfile)}`, 600, true, 55000));
-            sendSSE(res, { step: 'ra', status: 'done', label: `Resident Advisor scouted (${raCandidates.length} tracks)`, elapsed: Date.now() - t10 });
-        } catch (err) {
-            console.warn('[recommend] Agent 10 (RA) failed:', err.message);
-            sendSSE(res, { step: 'ra', status: 'warn', label: 'RA scout slow — continuing with other sources', elapsed: Date.now() - t10 });
-        }
-
-        // Agent 11: CSV Niche Matcher — pure JS, zero tokens
-        sendSSE(res, { step: 'niche', status: 'active', label: 'Checking niche artist database...' });
+        // Discovery 3: CSV Niche Matcher — pure JS, zero tokens, instant
+        sendSSE(res, { step: 'niche', status: 'active', label: 'Checking niche database...' });
         const nicheArtists = getNicheArtists(subgenres);
-        const totalCandidates = beatportCandidates.length + traxsourceCandidates.length + raCandidates.length;
-        console.log('[recommend] niche artists:', nicheArtists.length, '| web candidates:', totalCandidates);
+        console.log('[recommend] niche artists:', nicheArtists.length);
         sendSSE(res, { step: 'niche', status: 'done', label: `${nicheArtists.length} niche artists matched`, elapsed: 0 });
 
-        const allCandidates = [...beatportCandidates, ...traxsourceCandidates, ...raCandidates];
-
-        // Agent 12: Pre-Scorer
-        await delay(2000);
-        sendSSE(res, { step: 'score', status: 'active', label: 'Scoring candidates...' });
-        const t12 = Date.now();
-        const weightsLine = hasFreeText
-            ? '40% vibe match, 30% preference match, 30% free text match'
-            : '57% vibe match, 43% preference match';
-        const a12System = `Score these candidate tracks against this vibe DNA and preference profile. Weights: ${weightsLine}. Also check if any niche artists provided would fit better — if so add them. Return ONLY top 10 scored candidates as JSON array: [{artist, title, subgenre, score_out_of_10, why_it_fits}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
-        const a12User = `VIBE DNA: ${JSON.stringify(vibe)}\nPREFERENCE PROFILE: ${JSON.stringify(prefProfile)}${hasFreeText ? `\nFREE TEXT: "${preferences.freeText}"` : ''}\nCANDIDATES (${allCandidates.length}): ${JSON.stringify(allCandidates)}\nNICHE ARTISTS: ${nicheArtists.join(', ')}`;
-        const scoredRaw = await callAgentWithTimeout(a12System, a12User, 800, false, 25000);
-        const scoredCandidates = unwrapArray(scoredRaw);
-        sendSSE(res, { step: 'score', status: 'done', label: `${scoredCandidates.length} candidates scored`, elapsed: Date.now() - t12 });
-
-        // Agent 13: Final Recommendation Builder
-        await delay(2000);
+        // Agent Final: Recommendation Engine — single scoring call, no web search
         sendSSE(res, { step: 'build', status: 'active', label: 'Building your playlist...' });
         const t13 = Date.now();
-        const a13System = `You are the final recommendation engine. From these pre-scored candidates select exactly 8 best matches. For each write a compelling card. Return ONLY JSON array of exactly 8 objects: [{title, artist, subgenre, scene (one line), instruments (array of 3), why (2 sentences referencing specific vibe dimensions), youtube_url (https://music.youtube.com/search?q=Artist+Title with spaces as +), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (string: which weights drove this — vibe/preference/freetext)}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
-        const a13User = `SCORED CANDIDATES: ${JSON.stringify(scoredCandidates)}\nVIBE DNA: ${JSON.stringify(vibe)}\nPREFERENCE PROFILE: ${JSON.stringify(prefProfile)}`;
-        const recsRaw = await callAgentWithTimeout(a13System, a13User, 1800, false, 25000);
+        const weightsLine = hasFreeText
+            ? '40% match to vibe DNA, 30% match to preference profile, 30% match to free text'
+            : '57% match to vibe DNA, 43% match to preference profile';
+        const aFinalSystem = `You are a House music recommendation engine. From these candidate tracks, select exactly 8 best matches using these weights: ${weightsLine}. Prioritise sonic fit over fame. Return ONLY JSON array of exactly 8 tracks: [{title, artist, subgenre, scene (one line), instruments (array of 3), why (2 sentences referencing specific vibe dimensions), youtube_url (https://music.youtube.com/search?q=Artist+Title with spaces as +), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (vibe/preference/freetext)}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
+        const aFinalUser = [
+            `CANDIDATE TRACKS (real Last.fm releases):\n${JSON.stringify(tagCandidates)}`,
+            `SIMILAR ARTISTS TO USER'S TRACKS:\n${similarArtists.join(', ') || 'none'}`,
+            `NICHE CURATED ARTISTS:\n${nicheArtists.join(', ')}`,
+            `VIBE DNA:\n${JSON.stringify(vibe)}`,
+            `PREFERENCE PROFILE:\n${JSON.stringify(prefProfile)}`,
+            hasFreeText ? `FREE TEXT: "${preferences.freeText}"` : '',
+        ].filter(Boolean).join('\n\n');
+        const recsRaw = await callAgentWithTimeout(aFinalSystem, aFinalUser, 2500, false, 25000);
         const recommendations = unwrapArray(recsRaw);
         const elapsed13 = Date.now() - t13;
-        console.log(`[recommend] Agent 13 done in ${elapsed13}ms | tracks: ${recommendations.length}`);
+        console.log(`[recommend] Agent Final done in ${elapsed13}ms | tracks: ${recommendations.length}`);
         sendSSE(res, { step: 'build', status: 'done', label: 'Playlist built', elapsed: elapsed13 });
         sendSSE(res, { type: 'final', result: recommendations });
         clearInterval(keepalive);

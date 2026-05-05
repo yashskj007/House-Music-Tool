@@ -1,0 +1,65 @@
+Read CLAUDE.md for context. Replace the unreliable Anthropic web search with direct Last.fm API + CSV. This eliminates all timeouts, rate limits, and stuck pipelines.
+
+NEW ARCHITECTURE — RELIABLE & FAST
+
+Keep these existing agents unchanged:
+- Agents 1-5 (Track Decoders) — work fine
+- Agent 6 (Vibe Synthesiser) — works fine
+- Agent 7 (Preference Interpreter) — works fine
+
+REPLACE Agents 8-10 (the 3 web search scouts) with these new INSTANT discovery functions:
+
+DISCOVERY 1 — LAST.FM TAG TRACKS (in server.js, no Anthropic call)
+For each dominant subgenre detected by Agent 6, call Last.fm tag.gettoptracks endpoint:
+URL format: https://ws.audioscrobbler.com/2.0/?method=tag.gettoptracks&tag={SUBGENRE}&limit=20&api_key=${LASTFM_API_KEY}&format=json
+
+For example if Agent 6 detects "afro house" and "deep house" as dominant subgenres:
+- Call tag.gettoptracks for "afro house" → get 20 tracks
+- Call tag.gettoptracks for "deep house" → get 20 tracks
+Total: 40 candidate tracks with real listener counts and rankings.
+Run these calls in parallel (Promise.all). Each call takes ~500ms. Total: ~1 second.
+
+DISCOVERY 2 — LAST.FM SIMILAR TRACKS (in server.js, no Anthropic call)
+For each of the user's 5 input tracks, you already fetched similar tracks via track.getSimilar in the analysis phase. Reuse those results - they give you 25-40 more candidates that listeners of those exact tracks also play.
+
+DISCOVERY 3 — CSV NICHE MATCHER (existing Agent 11, keep as is)
+Pure JS, instant, returns 30 niche artists from CSV matching detected subgenres.
+
+After Discoveries 1+2+3 complete (total ~1-2 seconds), you have:
+- 40 popular subgenre-matched tracks (Last.fm tags)
+- 25-40 similar-listener tracks (Last.fm similar)  
+- 30 niche curated artists (CSV)
+= 95-110 candidate tracks/artists, all real, all relevant
+
+REPLACE Agents 12-13 with ONE final Anthropic call:
+
+AGENT FINAL — RECOMMENDATION ENGINE
+Input: candidate tracks list (compact format) + Agent 6 vibe DNA + Agent 7 preference profile + free text
+System prompt (under 300 tokens):
+"You are a House music recommendation engine. From these candidate tracks, select exactly 8 best matches using these weights: 40% match to vibe DNA, 30% match to preference profile, 30% match to free text (or 57/43 split if no free text). Prioritise sonic fit over fame. Return ONLY JSON array of 8 tracks: [{title, artist, subgenre, scene (one line), instruments (3 items), why (2 sentences referencing specific dimensions), youtube_url (https://music.youtube.com/search?q=Artist+Title), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (vibe/preference/freetext)}]"
+Max tokens: 2500
+NO web search tool. Pure scoring call.
+
+KEEP THE SSE PROGRESS TIMELINE but with new step labels:
+1-5. Decode Track 1-5 (existing)
+6. Synthesise Vibe DNA (existing)
+7. Map Preferences (existing)
+8. Find subgenre tracks (Last.fm tags - 1 second)
+9. Find similar tracks (Last.fm similar - already cached)
+10. Check niche database (CSV - instant)
+11. Build playlist (final Anthropic scoring - 5-8 seconds)
+
+TOTAL PIPELINE TIME: ~30 seconds (was 60+ seconds)
+TOTAL ANTHROPIC CALLS: 8 (was 13)
+WEB SEARCH USAGE: ZERO (was 3 calls)
+STUCK PROBABILITY: near zero (was constantly stuck)
+RATE LIMIT RISK: zero (max 4000 tokens in any minute)
+
+IMPLEMENTATION NOTES:
+- Keep all existing keepalive SSE pings every 8 seconds
+- Keep graceful failure - if any Last.fm call fails, continue with what worked
+- Keep 25 second timeout per Anthropic call
+- Last.fm has no rate limit for our usage volume
+- Last.fm API is rock solid - never hangs
+
+Update CLAUDE.md to reflect new architecture. Commit and push.

@@ -1091,13 +1091,11 @@
 
         // Append recommend steps to existing pipeline timeline
         appendTimelineSteps([
-            { id: 'prefs',      label: 'Map Preferences' },
-            { id: 'beatport',   label: 'Scout Beatport' },
-            { id: 'traxsource', label: 'Scout Traxsource' },
-            { id: 'ra',         label: 'Scout Resident Advisor' },
-            { id: 'niche',      label: 'Check Niche Database' },
-            { id: 'score',      label: 'Score Candidates' },
-            { id: 'build',      label: 'Build Playlist' },
+            { id: 'prefs',          label: 'Map Preferences' },
+            { id: 'lastfm_tags',    label: 'Find Subgenre Tracks' },
+            { id: 'lastfm_similar', label: 'Find Similar Tracks' },
+            { id: 'niche',          label: 'Check Niche Database' },
+            { id: 'build',          label: 'Build Playlist' },
         ]);
 
         // Scroll to timeline so user can watch progress
@@ -1109,7 +1107,8 @@
 
         try {
             await readSSE('/api/recommend', {
-                vibe: vibeToSend,
+                vibe:       vibeToSend,
+                lfmSimilar: _lfmSimilar || [],
                 preferences: {
                     beat_feel:        questionAnswers.beat_feel,
                     sound_texture:    questionAnswers.sound_texture,
