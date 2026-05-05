@@ -95,6 +95,12 @@ try {
     console.error('[startup] CSV load failed:', err.message);
 }
 
+// Pre-generate plain-text artist strings for prompt caching
+const artistTextByBucket = {};
+for (const [key, artists] of Object.entries(artistsByBucket)) {
+    artistTextByBucket[key] = artists.slice(0, 80).join(', ');
+}
+
 // ── Daily limit ───────────────────────────────────────────────────────────
 let dailyUsage = { date: '', count: 0 };
 
@@ -125,27 +131,35 @@ app.post('/api/claude', async (req, res) => {
         });
     }
 
-    // Inject niche artist reference into system prompt when subgenres are provided
+    // Build system blocks array with prompt caching
     const detectedSubgenres = Array.isArray(req.body.subgenres) ? req.body.subgenres : [];
-    let systemPrompt = req.body.system || '';
+    const baseSystemText = req.body.system || '';
+    let systemBlocks;
 
     if (detectedSubgenres.length > 0) {
         const bucketKey  = subgenresToBucketKey(detectedSubgenres);
-        const niche      = (artistsByBucket[bucketKey] || []).slice(0, 80);
-
-        if (niche.length > 0) {
-            systemPrompt +=
-                `\n\nNICHE ARTIST REFERENCE — ${bucketKey.replace(/_/g, ' ')} (${niche.length} curated artists):` +
-                `\nWeb search is primary. Also consider these niche specialists:` +
-                `\n${niche.join(', ')}`;
-            console.log(`[claude] injected ${niche.length} artists for bucket "${bucketKey}"`);
+        const artistText = artistTextByBucket[bucketKey] || '';
+        if (artistText) {
+            const artistCount = Math.min((artistsByBucket[bucketKey] || []).length, 80);
+            const nicheBlock  =
+                `\n\nNICHE ARTIST REFERENCE — ${bucketKey.replace(/_/g, ' ')} (${artistCount} curated artists):` +
+                `\nWeb search is primary. Also consider these niche specialists:\n${artistText}`;
+            systemBlocks = [
+                { type: 'text', text: baseSystemText },
+                { type: 'text', text: nicheBlock, cache_control: { type: 'ephemeral' } },
+            ];
+            console.log(`[claude] injected ${artistCount} artists for bucket "${bucketKey}" (cached)`);
+        } else {
+            systemBlocks = [{ type: 'text', text: baseSystemText, cache_control: { type: 'ephemeral' } }];
         }
+    } else {
+        systemBlocks = [{ type: 'text', text: baseSystemText, cache_control: { type: 'ephemeral' } }];
     }
 
     const upstreamBody = {
         model:      req.body.model || 'claude-sonnet-4-6',
         max_tokens: req.body.max_tokens || 2000,
-        system:     systemPrompt,
+        system:     systemBlocks,
         messages:   req.body.messages,
         tools:      [{ type: 'web_search_20250305', name: 'web_search' }],
     };
@@ -154,7 +168,7 @@ app.post('/api/claude', async (req, res) => {
         'Content-Type':      'application/json',
         'x-api-key':         process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
-        'anthropic-beta':    'web-search-2025-03-05',
+        'anthropic-beta':    'prompt-caching-2024-07-31,web-search-2025-03-05',
     };
 
     const callAnthropic = () => fetch('https://api.anthropic.com/v1/messages', {
@@ -194,7 +208,12 @@ app.post('/api/claude', async (req, res) => {
         .map(b => b.text)
         .join('\n');
 
-    const totalInputChars = (upstreamBody.system || '').length + JSON.stringify(upstreamBody.messages).length;
+    if (data.usage) {
+        const { input_tokens = 0, output_tokens = 0, cache_creation_input_tokens: cacheWrite = 0, cache_read_input_tokens: cacheRead = 0 } = data.usage;
+        console.log(`[claude] usage — input:${input_tokens} output:${output_tokens} cache_write:${cacheWrite} cache_read:${cacheRead}`);
+    }
+
+    const totalInputChars = JSON.stringify(upstreamBody.system || '').length + JSON.stringify(upstreamBody.messages).length;
     console.log('[claude] total input chars sent to Anthropic:', totalInputChars);
     console.log('[claude] sending content length:', fullText.length, '| preview:', fullText.slice(0, 120));
     res.json({ content: fullText });
