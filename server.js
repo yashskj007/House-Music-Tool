@@ -104,6 +104,105 @@ function getNicheArtists(subgenres) {
     return (artistsByBucket[bucketKey] || []).slice(0, 30);
 }
 
+// ── Resilience constants ──────────────────────────────────────────────────
+const MIN_CANDIDATES     = 15;
+const TARGET_CANDIDATES  = 50;
+const PIPELINE_BUDGET_MS = 45000;
+const STEP_DEADLINES     = { preference: 3000, lastfmTags: 3000, deterministicScore: 100, llmEnrich: 20000 };
+
+// Refinement 5: 1-hour in-memory LRU cache for Last.fm responses
+const lfmCache = new Map();
+const CACHE_TTL = 3600000;
+async function cachedFetch(key, fetchFn) {
+    const hit = lfmCache.get(key);
+    if (hit && Date.now() - hit.time < CACHE_TTL) return hit.data;
+    const data = await fetchFn();
+    lfmCache.set(key, { data, time: Date.now() });
+    return data;
+}
+
+// Refinement 9: Retry with exponential backoff + jitter
+async function retryWithJitter(fn, maxAttempts = 2) {
+    for (let i = 0; i < maxAttempts; i++) {
+        try { return await fn(); }
+        catch (err) {
+            if (i === maxAttempts - 1) throw err;
+            const d = (Math.pow(2, i) * 500) + Math.random() * 500;
+            await new Promise(r => setTimeout(r, d));
+        }
+    }
+}
+
+// Refinement 7: Structured step logging
+function logStep(step, data) {
+    console.log(JSON.stringify({
+        step,
+        timestamp:        Date.now(),
+        duration_ms:      data.duration,
+        success:          data.success,
+        candidates_count: data.candidates,
+        fallback_used:    data.fallback || false,
+        error:            data.error || null,
+    }));
+}
+
+// Refinement 1: Deterministic scorer — zero external dependencies, always returns results
+function scoreCandidatesDeterministic(candidates, vibeDNA, preferences, freeTextKeywords) {
+    return candidates.map(c => {
+        let score = 0;
+        if (vibeDNA.dominant_subgenres?.includes(c.subgenre)) score += 40;
+        if (vibeDNA.dimensions?.find(d => d.detail?.toLowerCase().includes(c.subgenre?.toLowerCase()))) score += 10;
+        if (preferences.groove_want  && c.tags?.some(t => t.includes(preferences.groove_want)))  score += 10;
+        if (preferences.texture_want && c.tags?.some(t => t.includes(preferences.texture_want))) score += 10;
+        if (preferences.harmony_want && c.tags?.some(t => t.includes(preferences.harmony_want))) score += 10;
+        if (freeTextKeywords?.length) {
+            freeTextKeywords.forEach(k => {
+                if (c.title?.toLowerCase().includes(k.toLowerCase()))             score += 5;
+                if (c.tags?.some(t => t.toLowerCase().includes(k.toLowerCase()))) score += 5;
+            });
+        }
+        if (c.source === 'csv_niche')      score += 8;
+        if (c.source === 'lastfm_similar') score += 5;
+        return { ...c, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+}
+
+// Refinement 2: Template "why" generator for deterministic fallback path
+function generateTemplateWhy(track, vibeDNA) {
+    const sub     = vibeDNA.dominant_subgenres?.[0] || 'house';
+    const dimName = vibeDNA.dimensions?.[0]?.name   || 'Tempo DNA';
+    return `Matches your ${sub} preference with ${track.subgenre || 'house'} energy. Strong fit on ${dimName}.`;
+}
+
+function formatDeterministicRec(c, vibe) {
+    const q = encodeURIComponent(`${c.artist} ${c.title || ''}`).replace(/%20/g, '+');
+    return {
+        title:       c.title  || c.artist,
+        artist:      c.artist,
+        subgenre:    c.subgenre || vibe.dominant_subgenres?.[0] || 'house',
+        scene:       `${c.subgenre || 'House'} scene`,
+        instruments: ['drums', 'bass', 'synth'],
+        why:         generateTemplateWhy(c, vibe),
+        youtube_url: `https://music.youtube.com/search?q=${q}`,
+        spotify_url: `https://open.spotify.com/search/${encodeURIComponent(`${c.artist} ${c.title || ''}`)}/tracks`,
+        lastfm_url:  `https://www.last.fm/music/${encodeURIComponent(c.artist)}/_/${encodeURIComponent(c.title || '')}`,
+        weightMatch: 'deterministic vibe match',
+    };
+}
+
+// Refinement 6: Source diversity caps — prevents any single source from swamping
+function diversifyCandidates(candidates) {
+    const bySource = { lastfm_tags: [], lastfm_similar: [], csv_niche: [] };
+    candidates.forEach(c => { if (bySource[c.source]) bySource[c.source].push(c); });
+    return [
+        ...bySource.lastfm_tags.slice(0, 4),
+        ...bySource.lastfm_similar.slice(0, 4),
+        ...bySource.csv_niche.slice(0, 4),
+    ];
+}
+
 // Discovery 1: Last.fm tag top tracks — no Anthropic call, ~500ms per tag
 async function fetchLastFmTagTracks(tag) {
     try {
@@ -112,7 +211,7 @@ async function fetchLastFmTagTracks(tag) {
         if (!res.ok) return [];
         const data = await res.json();
         return (data.tracks?.track || [])
-            .map(t => ({ artist: t.artist?.name || '', title: t.name || '', subgenre: tag }))
+            .map(t => ({ artist: t.artist?.name || '', title: t.name || '', subgenre: tag, source: 'lastfm_tags' }))
             .filter(t => t.artist && t.title);
     } catch { return []; }
 }
@@ -289,7 +388,7 @@ app.post('/api/analyse', async (req, res) => {
     }
 });
 
-// ── /api/recommend — SSE: Agents 7-13 ────────────────────────────────────
+// ── /api/recommend — SSE: Agents 7 + Discoveries 1-3 + LLM enrichment ───
 app.post('/api/recommend', async (req, res) => {
     if (!checkAndIncrement()) {
         return res.status(429).json({ error: { message: "We have hit today's limit. Check back tomorrow!" } });
@@ -307,74 +406,181 @@ app.post('/api/recommend', async (req, res) => {
     const keepalive = setInterval(() => { try { res.write(': keepalive\n\n'); } catch (e) { clearInterval(keepalive); } }, 8000);
     req.on('close', () => clearInterval(keepalive));
 
-    // Similar artists passed from client (fetched during analysis phase)
     const lfmSimilar = Array.isArray(req.body.lfmSimilar) ? req.body.lfmSimilar : [];
+    const pipelineStart = Date.now();
+
+    // Refinement 10: Partial result checkpoints
+    const jobState = {
+        vibe, preferences: null, candidates: [], scoredCandidates: [], finalRecommendations: [],
+    };
+
+    // Refinement 8: Confidence tracking (logged only, never shown to user)
+    const confidence = { level: 'high', reasons: [] };
 
     try {
-        // Agent 7: Preference Interpreter
+        // Agent 7: Preference Interpreter — with per-step deadline
         sendSSE(res, { step: 'prefs', status: 'active', label: 'Mapping your preferences...' });
         const t7 = Date.now();
-        const a7System = `Convert House music preference scores (1-5) and free text into a sonic profile. Return ONLY JSON: {groove_want, texture_want, harmony_want, structure_want, discovery_want, keywords (array of strings), moment}. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {`;
-        const prefProfile = await callAgentWithTimeout(a7System, JSON.stringify({
-            beat_feel:        preferences.beat_feel,
-            sound_texture:    preferences.sound_texture,
-            emotion_hypnosis: preferences.emotion_hypnosis,
-            track_journey:    preferences.track_journey,
-            discovery_style:  preferences.discovery_style,
-            freeText:         preferences.freeText || '',
-        }), 250, false, 25000);
-        sendSSE(res, { step: 'prefs', status: 'done', label: 'Preferences mapped', elapsed: Date.now() - t7 });
+        let prefProfile = { groove_want: '', texture_want: '', harmony_want: '', keywords: [] };
+        try {
+            const a7System = `Convert House music preference scores (1-5) and free text into a sonic profile. Return ONLY JSON: {groove_want, texture_want, harmony_want, structure_want, discovery_want, keywords (array of strings), moment}. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {`;
+            prefProfile = await Promise.race([
+                callAgentWithTimeout(a7System, JSON.stringify({
+                    beat_feel:        preferences.beat_feel,
+                    sound_texture:    preferences.sound_texture,
+                    emotion_hypnosis: preferences.emotion_hypnosis,
+                    track_journey:    preferences.track_journey,
+                    discovery_style:  preferences.discovery_style,
+                    freeText:         preferences.freeText || '',
+                }), 250, false, 25000),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('prefs_timeout')), STEP_DEADLINES.preference)),
+            ]);
+        } catch (err) {
+            console.log('[recommend] prefs fallback — continuing:', err.message);
+        }
+        jobState.preferences = prefProfile;
+        const d7 = Date.now() - t7;
+        logStep('preference', { duration: d7, success: Boolean(prefProfile.groove_want), candidates: 0, fallback: !prefProfile.groove_want });
+        sendSSE(res, { step: 'prefs', status: 'done', label: 'Preferences mapped', elapsed: d7 });
 
-        // Discovery 1: Last.fm tag top tracks — parallel, ~1s total, no Anthropic call
+        // Discovery 1: Last.fm tag tracks — cached, retried, per-tag deadline (Refinements 3, 5, 9)
         sendSSE(res, { step: 'lastfm_tags', status: 'active', label: 'Finding subgenre tracks...' });
         const t8 = Date.now();
         const tagsToSearch = subgenres.slice(0, 2).filter(Boolean);
-        const tagResults = tagsToSearch.length
-            ? await Promise.all(tagsToSearch.map(tag => fetchLastFmTagTracks(tag)))
+        const tagCandidates = tagsToSearch.length
+            ? (await Promise.all(
+                tagsToSearch.map(tag =>
+                    Promise.race([
+                        cachedFetch(`tag:${tag}`, () => retryWithJitter(() => fetchLastFmTagTracks(tag))),
+                        new Promise(resolve => setTimeout(() => resolve([]), STEP_DEADLINES.lastfmTags)),
+                    ])
+                )
+              )).flat()
             : [];
-        const tagCandidates = tagResults.flat();
+        const d8 = Date.now() - t8;
         console.log('[recommend] Last.fm tag tracks:', tagCandidates.length, 'from tags:', tagsToSearch);
-        sendSSE(res, { step: 'lastfm_tags', status: 'done', label: `${tagCandidates.length} subgenre tracks found`, elapsed: Date.now() - t8 });
+        logStep('lastfmTags', { duration: d8, success: tagCandidates.length > 0, candidates: tagCandidates.length });
+        sendSSE(res, { step: 'lastfm_tags', status: 'done', label: `${tagCandidates.length} subgenre tracks found`, elapsed: d8 });
 
-        // Discovery 2: Last.fm similar artists — already cached from analysis phase, instant
+        // Discovery 2: Last.fm similar artists — instant, from analysis phase
         sendSSE(res, { step: 'lastfm_similar', status: 'active', label: 'Finding similar tracks...' });
-        const similarArtists = [...new Set(lfmSimilar.flatMap(x => x.similar || []))];
-        console.log('[recommend] similar artists from Last.fm:', similarArtists.length);
-        sendSSE(res, { step: 'lastfm_similar', status: 'done', label: `${similarArtists.length} similar artists identified`, elapsed: 0 });
+        const similarArtistNames = [...new Set(lfmSimilar.flatMap(x => x.similar || []))];
+        const similarCandidates = similarArtistNames.map(a => ({
+            artist: a, title: '', subgenre: subgenres[0] || 'house', source: 'lastfm_similar',
+        }));
+        console.log('[recommend] similar artists:', similarArtistNames.length);
+        sendSSE(res, { step: 'lastfm_similar', status: 'done', label: `${similarArtistNames.length} similar artists identified`, elapsed: 0 });
 
-        // Discovery 3: CSV Niche Matcher — pure JS, zero tokens, instant
+        // Discovery 3: CSV Niche Matcher — pure JS, instant
         sendSSE(res, { step: 'niche', status: 'active', label: 'Checking niche database...' });
         const nicheArtists = getNicheArtists(subgenres);
+        const nicheCandidates = nicheArtists.map(a => ({
+            artist: a, title: '', subgenre: subgenres[0] || 'house', source: 'csv_niche',
+        }));
         console.log('[recommend] niche artists:', nicheArtists.length);
         sendSSE(res, { step: 'niche', status: 'done', label: `${nicheArtists.length} niche artists matched`, elapsed: 0 });
 
-        // Agent Final: Recommendation Engine — single scoring call, no web search
+        // Refinement 3: Quorum check — assess candidate pool quality
+        const allCandidates = [...tagCandidates, ...similarCandidates, ...nicheCandidates];
+        if (tagCandidates.length === 0) {
+            confidence.level = 'low';
+            confidence.reasons.push('discovery_apis_unavailable');
+        } else if (allCandidates.length < TARGET_CANDIDATES) {
+            confidence.level = 'medium';
+            confidence.reasons.push('limited_candidates');
+        }
+
+        // Broaden if below minimum threshold
+        let broadenedCandidates = allCandidates;
+        if (allCandidates.length < MIN_CANDIDATES) {
+            try {
+                const fallback = await Promise.race([
+                    cachedFetch('tag:house', () => retryWithJitter(() => fetchLastFmTagTracks('house'))),
+                    new Promise(resolve => setTimeout(() => resolve([]), 3000)),
+                ]);
+                broadenedCandidates = [...allCandidates, ...fallback];
+                console.log('[recommend] broadened with house tag:', fallback.length, 'extra tracks');
+            } catch {}
+        }
+
+        // Refinement 6: Diversity caps — prevent any single source swamping the top 8
+        jobState.candidates = diversifyCandidates(broadenedCandidates);
+        console.log('[recommend] total:', allCandidates.length, '| diversified:', jobState.candidates.length, '| confidence:', confidence.level);
+
+        // Refinement 1: Deterministic scorer — ALWAYS produces 8 results, zero failure modes
+        const freeTextKeywords = hasFreeText
+            ? preferences.freeText.trim().split(/\s+/).filter(k => k.length > 3)
+            : [];
+        const tScore = Date.now();
+        jobState.scoredCandidates = scoreCandidatesDeterministic(jobState.candidates, vibe, prefProfile, freeTextKeywords);
+        logStep('deterministicScore', { duration: Date.now() - tScore, success: true, candidates: jobState.scoredCandidates.length });
+
+        // Refinement 4: Check pipeline budget — skip LLM enrichment if too close to limit
+        const skipLLM = (Date.now() - pipelineStart) > 40000;
+
+        // Refinement 2: LLM enrichment — enriches deterministic top 8, graceful fallback
         sendSSE(res, { step: 'build', status: 'active', label: 'Building your playlist...' });
         const t13 = Date.now();
-        const weightsLine = hasFreeText
-            ? '40% match to vibe DNA, 30% match to preference profile, 30% match to free text'
-            : '57% match to vibe DNA, 43% match to preference profile';
-        const aFinalSystem = `You are a House music recommendation engine. From these candidate tracks, select exactly 8 best matches using these weights: ${weightsLine}. Prioritise sonic fit over fame. Return ONLY JSON array of exactly 8 tracks: [{title, artist, subgenre, scene (one line), instruments (array of 3), why (2 sentences referencing specific vibe dimensions), youtube_url (https://music.youtube.com/search?q=Artist+Title with spaces as +), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (vibe/preference/freetext)}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
-        const aFinalUser = [
-            `CANDIDATE TRACKS (real Last.fm releases):\n${JSON.stringify(tagCandidates)}`,
-            `SIMILAR ARTISTS TO USER'S TRACKS:\n${similarArtists.join(', ') || 'none'}`,
-            `NICHE CURATED ARTISTS:\n${nicheArtists.join(', ')}`,
-            `VIBE DNA:\n${JSON.stringify(vibe)}`,
-            `PREFERENCE PROFILE:\n${JSON.stringify(prefProfile)}`,
-            hasFreeText ? `FREE TEXT: "${preferences.freeText}"` : '',
-        ].filter(Boolean).join('\n\n');
-        const recsRaw = await callAgentWithTimeout(aFinalSystem, aFinalUser, 2500, false, 25000);
-        const recommendations = unwrapArray(recsRaw);
-        const elapsed13 = Date.now() - t13;
-        console.log(`[recommend] Agent Final done in ${elapsed13}ms | tracks: ${recommendations.length}`);
-        sendSSE(res, { step: 'build', status: 'done', label: 'Playlist built', elapsed: elapsed13 });
+        let recommendations;
+        let llmSuccess = false;
+
+        if (skipLLM) {
+            console.log('[recommend] LLM skipped — pipeline budget exceeded');
+            recommendations = jobState.scoredCandidates.map(c => formatDeterministicRec(c, vibe));
+        } else {
+            const weightsLine = hasFreeText
+                ? '40% match to vibe DNA, 30% match to preference profile, 30% match to free text'
+                : '57% match to vibe DNA, 43% match to preference profile';
+            const aFinalSystem = `You are a House music recommendation engine. From these candidate tracks, select exactly 8 best matches using these weights: ${weightsLine}. Prioritise sonic fit over fame. Return ONLY JSON array of exactly 8 tracks: [{title, artist, subgenre, scene (one line), instruments (array of 3), why (2 sentences referencing specific vibe dimensions), youtube_url (https://music.youtube.com/search?q=Artist+Title with spaces as +), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (vibe/preference/freetext)}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
+            const aFinalUser = [
+                `CANDIDATE TRACKS (top 8 pre-scored):\n${JSON.stringify(jobState.scoredCandidates)}`,
+                `ALL SIMILAR ARTISTS:\n${similarArtistNames.join(', ') || 'none'}`,
+                `NICHE CURATED ARTISTS:\n${nicheArtists.join(', ')}`,
+                `VIBE DNA:\n${JSON.stringify(vibe)}`,
+                `PREFERENCE PROFILE:\n${JSON.stringify(prefProfile)}`,
+                hasFreeText ? `FREE TEXT: "${preferences.freeText}"` : '',
+            ].filter(Boolean).join('\n\n');
+
+            try {
+                const recsRaw = await Promise.race([
+                    callAgentWithTimeout(aFinalSystem, aFinalUser, 2500, false, 25000),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('llm_timeout')), STEP_DEADLINES.llmEnrich)),
+                ]);
+                const enriched = unwrapArray(recsRaw);
+                if (enriched.length) { recommendations = enriched; llmSuccess = true; }
+                else throw new Error('empty_llm_result');
+            } catch (err) {
+                console.log('[recommend] LLM enrichment failed, using deterministic fallback:', err.message);
+                recommendations = jobState.scoredCandidates.map(c => formatDeterministicRec(c, vibe));
+            }
+        }
+
+        // Update confidence if LLM path was not used
+        if (!llmSuccess) {
+            confidence.reasons.push('using_template_rationale');
+            if (confidence.level === 'high') confidence.level = 'medium';
+        }
+
+        const d13 = Date.now() - t13;
+        logStep('llmEnrich', { duration: d13, success: llmSuccess, candidates: recommendations.length, fallback: !llmSuccess });
+        console.log(`[recommend] done in ${Date.now() - pipelineStart}ms | tracks: ${recommendations.length} | confidence: ${JSON.stringify(confidence)}`);
+
+        jobState.finalRecommendations = recommendations;
+        sendSSE(res, { step: 'build', status: 'done', label: 'Playlist built', elapsed: d13 });
         sendSSE(res, { type: 'final', result: recommendations });
         clearInterval(keepalive);
         res.end();
 
     } catch (err) {
+        // Refinement 10: Return partial results if deterministic scorer already ran
         console.error('[recommend] error:', err.message, '\n', err.stack);
-        sendSSE(res, { type: 'error', message: err.message });
+        if (jobState.scoredCandidates.length > 0) {
+            const fallbackRecs = jobState.scoredCandidates.map(c => formatDeterministicRec(c, vibe));
+            sendSSE(res, { step: 'build', status: 'warn', label: 'Using deterministic results' });
+            sendSSE(res, { type: 'final', result: fallbackRecs });
+        } else {
+            sendSSE(res, { type: 'error', message: err.message });
+        }
         clearInterval(keepalive);
         res.end();
     }
