@@ -392,17 +392,32 @@ function unwrapArray(v) {
 
 // ── Agent helpers ─────────────────────────────────────────────────────────
 function parseAgentJSON(text) {
+    // Try markdown fence first
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (fenceMatch) { try { return JSON.parse(fenceMatch[1].trim()); } catch {} }
+
+    // Find the matching closing bracket for a given opening bracket position.
+    // Using lastIndexOf fails on nested structures (e.g. a 10-element dimensions array
+    // has many inner '}' chars — lastIndexOf picks one in the middle of a truncated response).
+    function matchingEnd(str, start, open, close) {
+        let depth = 0;
+        for (let i = start; i < str.length; i++) {
+            if (str[i] === open)  depth++;
+            else if (str[i] === close) { if (--depth === 0) return i; }
+        }
+        return -1;
+    }
+
     const firstBrace   = text.indexOf('{');
     const firstBracket = text.indexOf('[');
+
     if (firstBracket !== -1 && (firstBrace === -1 || firstBracket < firstBrace)) {
-        const last = text.lastIndexOf(']');
-        if (last > firstBracket) { try { return JSON.parse(text.slice(firstBracket, last + 1)); } catch {} }
+        const end = matchingEnd(text, firstBracket, '[', ']');
+        if (end > firstBracket) { try { return JSON.parse(text.slice(firstBracket, end + 1)); } catch {} }
     }
     if (firstBrace !== -1) {
-        const last = text.lastIndexOf('}');
-        if (last > firstBrace) { try { return JSON.parse(text.slice(firstBrace, last + 1)); } catch {} }
+        const end = matchingEnd(text, firstBrace, '{', '}');
+        if (end > firstBrace) { try { return JSON.parse(text.slice(firstBrace, end + 1)); } catch {} }
     }
     try { return JSON.parse(text); } catch {}
     return null;
@@ -543,7 +558,7 @@ app.post('/api/analyse', async (req, res) => {
 
         const vibeSystem = `Music taste profiler. Synthesise these House track analyses. Return ONLY JSON: {vibeName, vibeDNA, dimensions (array of exactly 10 objects each with name, value, detail), dominant_subgenres (array of 3 strings), instrument_profile (array of objects with instrument and prominence), clubScene}. Dimension names must be: Tempo DNA, Harmonic Palette, Textural Layers, Emotional Arc, Vocal Character, Production Era, Geographic DNA, Scene Position, Listener Profile, Dancefloor Function. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {`;
 
-        const vibeProfile = await callAgentWithTimeout(vibeSystem, JSON.stringify(trackAnalyses), 1000, false, 25000);
+        const vibeProfile = await callAgentWithTimeout(vibeSystem, JSON.stringify(trackAnalyses), 1500, false, 25000);
         const elapsed6 = Date.now() - t6;
         console.log(`[analyse] Agent 6 done in ${elapsed6}ms | vibeName: ${vibeProfile.vibeName}`);
 
