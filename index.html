@@ -324,6 +324,34 @@
         .link-lfm:hover { background: rgba(188,51,51,0.06); }
         .song-verify { font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 8px; letter-spacing: 0.03em; }
 
+        /* ── Pipeline Timeline ── */
+        .timeline { display: flex; flex-direction: column; }
+        .tl-step {
+            display: flex; align-items: flex-start; gap: 14px;
+            padding: 7px 0; position: relative;
+        }
+        .tl-step:not(:last-child)::after {
+            content: ''; position: absolute; left: 7px; top: 23px;
+            width: 1px; height: calc(100% - 7px);
+            background: rgba(201,168,76,0.12);
+        }
+        .tl-dot {
+            width: 15px; height: 15px; border-radius: 50%;
+            flex-shrink: 0; margin-top: 2px;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .tl-step.pending .tl-dot  { border: 1px solid rgba(255,255,255,0.12); }
+        .tl-step.active  .tl-dot  { border: 1.5px solid rgba(201,168,76,0.4); border-top-color: var(--accent); animation: spin 0.75s linear infinite; }
+        .tl-step.done    .tl-dot  { background: var(--accent); }
+        .tl-step.error   .tl-dot  { background: rgba(239,68,68,0.6); }
+        .tl-body { flex: 1; min-width: 0; }
+        .tl-label { font-size: 12px; line-height: 1.45; color: rgba(255,255,255,0.28); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tl-step.active .tl-label { color: rgba(255,255,255,0.85); }
+        .tl-step.done   .tl-label { color: rgba(255,255,255,0.6); }
+        .tl-step.error  .tl-label { color: rgba(239,68,68,0.7); }
+        .tl-time { font-size: 10px; color: var(--accent); opacity: 0.65; margin-top: 1px; font-variant-numeric: tabular-nums; }
+
         /* ── Last.fm note ── */
         .lfm-note { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); margin-top: 8px; }
 
@@ -384,6 +412,7 @@
         <div id="resultsArea"></div>
     </div>
 
+    <div id="timelineArea"></div>
     <div id="dnaArea"></div>
     <div id="prefsArea"></div>
     <div id="songsArea"></div>
@@ -676,6 +705,88 @@
             });
     }
 
+    // ── SSE + Timeline helpers ────────────────────────────────────
+    const checkSvg = `<svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4 3,6 7,2"/></svg>`;
+
+    function initTimeline(steps) {
+        const stepsHtml = steps.map(s => `
+            <div class="tl-step pending" id="tls-${s.id}">
+                <div class="tl-dot"></div>
+                <div class="tl-body">
+                    <div class="tl-label">${esc(s.label)}</div>
+                    <div class="tl-time"></div>
+                </div>
+            </div>`).join('');
+        document.getElementById('timelineArea').innerHTML = `
+            <div class="card" style="padding:20px 32px">
+                <div class="section-lbl" style="margin-bottom:14px">Analysis Pipeline</div>
+                <div class="timeline" id="timelineSteps">${stepsHtml}</div>
+            </div>`;
+    }
+
+    function appendTimelineSteps(steps) {
+        const container = document.getElementById('timelineSteps');
+        if (!container) return;
+        steps.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'tl-step pending';
+            div.id = `tls-${s.id}`;
+            div.innerHTML = `
+                <div class="tl-dot"></div>
+                <div class="tl-body">
+                    <div class="tl-label">${esc(s.label)}</div>
+                    <div class="tl-time"></div>
+                </div>`;
+            container.appendChild(div);
+        });
+    }
+
+    function updateTimelineStep(id, status, label, elapsed) {
+        const el = document.getElementById(`tls-${id}`);
+        if (!el) return;
+        el.className = `tl-step ${status}`;
+        const dotEl   = el.querySelector('.tl-dot');
+        const labelEl = el.querySelector('.tl-label');
+        const timeEl  = el.querySelector('.tl-time');
+        if (dotEl)   dotEl.innerHTML   = status === 'done' ? checkSvg : '';
+        if (labelEl) labelEl.textContent = label;
+        if (timeEl && elapsed !== undefined && elapsed > 0) {
+            timeEl.textContent = `${(elapsed / 1000).toFixed(1)}s`;
+        }
+    }
+
+    async function readSSE(url, body, onEvent) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data?.error?.message || `API error ${res.status}`);
+        }
+        const reader  = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        const flush = () => {
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop() || '';
+            for (const part of parts) {
+                for (const line of part.split('\n')) {
+                    if (line.startsWith('data: ')) {
+                        try { onEvent(JSON.parse(line.slice(6))); } catch {}
+                    }
+                }
+            }
+        };
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) { buffer += '\n\n'; flush(); break; }
+            buffer += decoder.decode(value, { stream: true });
+            flush();
+        }
+    }
+
     // ── Step 1: Analyse ───────────────────────────────────────────
     async function analyseVibe() {
         const rawText = document.getElementById('songs').value.trim();
@@ -695,29 +806,32 @@
         btn.disabled = true;
         document.getElementById('btnInner').innerHTML = '<div class="spinner"></div> Analysing…';
         results.innerHTML = '';
+        document.getElementById('timelineArea').innerHTML = '';
         document.getElementById('dnaArea').innerHTML   = '';
         document.getElementById('prefsArea').innerHTML = '';
         document.getElementById('songsArea').innerHTML = '';
         lastVibe = null;
 
-        // Cycling loader: per-track decode messages then synthesis
-        const spinnerHtml = '<div class="spinner"></div>';
-        const analyseMsgs = [
-            ...tracks.map((_, i) => `Decoding Track ${i + 1}…`),
-            'Synthesising your DNA…',
-            'Almost there…',
-        ];
-        let msgIdx = 0;
-        const setStatus = msg => { results.innerHTML = `<div class="status-msg">${spinnerHtml} ${esc(msg)}</div>`; };
-        setStatus(analyseMsgs[0]);
-        const cycleTimer = setInterval(() => {
-            msgIdx = (msgIdx + 1) % analyseMsgs.length;
-            setStatus(analyseMsgs[msgIdx]);
-        }, 4000);
-
+        // Show Last.fm fetch status
+        results.innerHTML = `<div class="status-msg"><div class="spinner"></div> Fetching track metadata…</div>`;
         const [lfmData, lfmSimilar] = await Promise.all([
             fetchLastFmData(tracks),
             fetchLastFmSimilar(tracks)
+        ]);
+        results.innerHTML = '';
+
+        if (checkDailyLimit()) {
+            results.innerHTML = `<div class="error">We have hit today's limit. Check back tomorrow!</div>`;
+            btn.disabled = false;
+            document.getElementById('btnInner').innerHTML = `${waveHtml} Analyse My Vibe`;
+            return;
+        }
+        incrementDailyCount();
+
+        // Initialise timeline with all pending steps
+        initTimeline([
+            ...tracks.map((t, i) => ({ id: `track-${i}`, label: `Decode Track ${i + 1}: ${t.artist} — ${t.title}` })),
+            { id: 'vibe', label: 'Synthesise Vibe DNA' },
         ]);
 
         const songs = tracks.map((t, i) => ({
@@ -727,46 +841,34 @@
             lfmListeners: lfmData[i]?.listeners || 0,
         }));
 
-        if (checkDailyLimit()) {
-            clearInterval(cycleTimer);
-            results.innerHTML = `<div class="error">We have hit today's limit. Check back tomorrow!</div>`;
-            btn.disabled = false;
-            document.getElementById('btnInner').innerHTML = `${waveHtml} Analyse My Vibe`;
-            return;
-        }
-        incrementDailyCount();
+        let finalVibe   = null;
+        let serverError = null;
 
         try {
-            const controller = new AbortController();
-            const abortTimer = setTimeout(() => controller.abort(), 90000);
-
-            const res = await fetch('/api/analyse', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ songs }),
-                signal:  controller.signal,
+            await readSSE('/api/analyse', { songs }, (event) => {
+                if (event.type === 'final') {
+                    finalVibe = event.result;
+                } else if (event.type === 'error') {
+                    serverError = event.message;
+                } else if (event.step) {
+                    updateTimelineStep(event.step, event.status, event.label, event.elapsed);
+                }
             });
-            clearTimeout(abortTimer);
 
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data?.error?.message || `API error ${res.status}`);
+            if (serverError) throw new Error(serverError);
+            if (!finalVibe || typeof finalVibe !== 'object') throw new Error('Could not parse response — please try again.');
 
-            const vibe = data.vibe;
-            if (!vibe || typeof vibe !== 'object') throw new Error('Could not parse response — please try again.');
-            console.log('[analyseVibe] vibeName:', vibe.vibeName, '| dominant_subgenres:', vibe.dominant_subgenres);
-
-            lastVibe             = vibe;
+            console.log('[analyseVibe] vibeName:', finalVibe.vibeName, '| subgenres:', finalVibe.dominant_subgenres);
+            lastVibe             = finalVibe;
             lastVibe._lfmData    = lfmData;
             lastVibe._lfmSimilar = lfmSimilar;
-            results.innerHTML    = '';
-            renderResults(vibe);
-            renderDimensions(vibe, lfmData);
+            renderResults(finalVibe);
+            renderDimensions(finalVibe, lfmData);
             renderPreferences();
+
         } catch (err) {
-            const msg = err.name === 'AbortError' ? 'Taking longer than expected. Please try again.' : err.message;
-            results.innerHTML = `<div class="error">${esc(msg)}</div>`;
+            results.innerHTML = `<div class="error">${esc(err.message)}</div>`;
         } finally {
-            clearInterval(cycleTimer);
             btn.disabled = false;
             document.getElementById('btnInner').innerHTML = `${waveHtml} Analyse My Vibe`;
         }
@@ -943,7 +1045,7 @@
         }
     }
 
-    // ── Find songs — 4-agent pipeline via /api/recommend ─────────
+    // ── Find songs — SSE pipeline via /api/recommend ─────────────
     async function findSongs() {
         if (!lastVibe) return;
 
@@ -951,77 +1053,70 @@
         const inner       = document.getElementById('findBtnInner');
         const freeText    = (document.getElementById('freeText')?.value || '').trim();
         const hasFreeText = freeText.length > 0;
-        const spinnerHtml = '<div class="spinner"></div>';
+        const findIcon    = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>`;
 
         btn.disabled = true;
-        inner.innerHTML = `${spinnerHtml} Searching…`;
-
-        const statusMsgs = [
-            'Reading your preferences…',
-            'Scouting artists…',
-            'Building your playlist…',
-            'Almost there…',
-        ];
-        let msgIdx = 0;
-        const setStatus = msg =>
-            document.getElementById('songsArea').innerHTML =
-                `<div class="card"><div class="status-msg">${spinnerHtml} ${esc(msg)}</div></div>`;
-
-        setStatus(statusMsgs[0]);
-        const cycleTimer = setInterval(() => {
-            msgIdx = (msgIdx + 1) % statusMsgs.length;
-            setStatus(statusMsgs[msgIdx]);
-        }, 8000);
+        inner.innerHTML = `<div class="spinner"></div> Searching…`;
+        document.getElementById('songsArea').innerHTML = '';
 
         if (checkDailyLimit()) {
-            clearInterval(cycleTimer);
             document.getElementById('songsArea').innerHTML =
                 `<div class="card"><div class="error">We have hit today's limit. Check back tomorrow!</div></div>`;
             btn.disabled = false;
-            inner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Find My Resonance`;
+            inner.innerHTML = `${findIcon} Find My Resonance`;
             return;
         }
         incrementDailyCount();
 
+        // Append recommend steps to existing pipeline timeline
+        appendTimelineSteps([
+            { id: 'prefs',      label: 'Map Preferences' },
+            { id: 'beatport',   label: 'Scout Beatport' },
+            { id: 'traxsource', label: 'Scout Traxsource' },
+            { id: 'ra',         label: 'Scout Resident Advisor' },
+            { id: 'niche',      label: 'Check Niche Database' },
+            { id: 'score',      label: 'Score Candidates' },
+            { id: 'build',      label: 'Build Playlist' },
+        ]);
+
+        // Scroll to timeline so user can watch progress
+        document.getElementById('timelineArea').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        const { _lfmData, _lfmSimilar, ...vibeToSend } = lastVibe;
+        let finalRecs   = null;
+        let serverError = null;
+
         try {
-            const controller = new AbortController();
-            const abortTimer = setTimeout(() => controller.abort(), 120000);
-
-            const { _lfmData, _lfmSimilar, ...vibeToSend } = lastVibe;
-            const res = await fetch('/api/recommend', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({
-                    vibe: vibeToSend,
-                    preferences: {
-                        beat_feel:        questionAnswers.beat_feel,
-                        sound_texture:    questionAnswers.sound_texture,
-                        emotion_hypnosis: questionAnswers.emotion_hypnosis,
-                        track_journey:    questionAnswers.track_journey,
-                        discovery_style:  questionAnswers.discovery_style,
-                        freeText,
-                    },
-                }),
-                signal: controller.signal,
+            await readSSE('/api/recommend', {
+                vibe: vibeToSend,
+                preferences: {
+                    beat_feel:        questionAnswers.beat_feel,
+                    sound_texture:    questionAnswers.sound_texture,
+                    emotion_hypnosis: questionAnswers.emotion_hypnosis,
+                    track_journey:    questionAnswers.track_journey,
+                    discovery_style:  questionAnswers.discovery_style,
+                    freeText,
+                },
+            }, (event) => {
+                if (event.type === 'final') {
+                    finalRecs = event.result;
+                } else if (event.type === 'error') {
+                    serverError = event.message;
+                } else if (event.step) {
+                    updateTimelineStep(event.step, event.status, event.label, event.elapsed);
+                }
             });
-            clearTimeout(abortTimer);
 
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data?.error?.message || `API error ${res.status}`);
-
-            const songs = data.recommendations || [];
-            if (!Array.isArray(songs)) throw new Error('Unexpected response format — please try again.');
+            if (serverError) throw new Error(serverError);
+            const songs = Array.isArray(finalRecs) ? finalRecs : [];
             renderSongs(songs, hasFreeText ? freeText : null);
+
         } catch (err) {
-            const msg = err.name === 'AbortError'
-                ? 'Taking longer than expected. Please try again.'
-                : err.message;
             document.getElementById('songsArea').innerHTML =
-                `<div class="card"><div class="error">${esc(msg)}</div></div>`;
+                `<div class="card"><div class="error">${esc(err.message)}</div></div>`;
         } finally {
-            clearInterval(cycleTimer);
             btn.disabled = false;
-            inner.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Find My Resonance`;
+            inner.innerHTML = `${findIcon} Find My Resonance`;
         }
     }
 

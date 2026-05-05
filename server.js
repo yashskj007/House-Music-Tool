@@ -24,7 +24,6 @@ function parseCSVLine(line) {
     return row;
 }
 
-// Canonical bucket keys and the CSV bucket substrings that map to them
 const BUCKET_KEYWORDS = [
     ['afrotech_amapiano', ['south african', 'amapiano', 'afro-club', 'afro tech / amapiano']],
     ['uk_garage',         ['uk garage', 'bassline', 'uk / garage', 'uk house / garage']],
@@ -44,10 +43,9 @@ function normalizeBucket(rawBucket) {
     for (const [key, keywords] of BUCKET_KEYWORDS) {
         if (keywords.some(kw => b.includes(kw))) return key;
     }
-    return null; // skip legacy/crossover/mainstream buckets
+    return null;
 }
 
-// Maps a detected subgenre array to the best canonical bucket key
 function subgenresToBucketKey(subgenres = []) {
     const s = subgenres.join(' ').toLowerCase();
     if (/amapiano|south african|gqom|afro.?tech/.test(s)) return 'afrotech_amapiano';
@@ -95,16 +93,24 @@ try {
     console.error('[startup] CSV load failed:', err.message);
 }
 
-// Pre-generate plain-text artist strings for prompt caching
 const artistTextByBucket = {};
 for (const [key, artists] of Object.entries(artistsByBucket)) {
     artistTextByBucket[key] = artists.slice(0, 80).join(', ');
 }
 
-// Agent 9: pure JS CSV matcher — zero tokens
+// Agent 11: pure JS CSV matcher — zero tokens
 function getNicheArtists(subgenres) {
     const bucketKey = subgenresToBucketKey(subgenres || []);
-    return (artistsByBucket[bucketKey] || []).slice(0, 40);
+    return (artistsByBucket[bucketKey] || []).slice(0, 30);
+}
+
+function unwrapArray(v) {
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') {
+        const arr = Object.values(v).find(x => Array.isArray(x));
+        if (arr) return arr;
+    }
+    return [];
 }
 
 // ── Agent helpers ─────────────────────────────────────────────────────────
@@ -125,46 +131,50 @@ function parseAgentJSON(text) {
     return null;
 }
 
-async function callAnthropicAgent(systemBlocks, messages, maxTokens, useWebSearch) {
-    const betaHeader = useWebSearch
-        ? 'prompt-caching-2024-07-31,web-search-2025-03-05'
-        : 'prompt-caching-2024-07-31';
-    const body = {
-        model:      'claude-sonnet-4-6',
-        max_tokens: maxTokens,
-        system:     systemBlocks,
-        messages,
-        ...(useWebSearch ? { tools: [{ type: 'web_search_20250305', name: 'web_search' }] } : {}),
-    };
+function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function callAgent(systemPrompt, userMessage, maxTokens, useWebSearch = false, _retried = false) {
     const headers = {
         'Content-Type':      'application/json',
         'x-api-key':         process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
-        'anthropic-beta':    betaHeader,
+        'anthropic-beta':    'prompt-caching-2024-07-31,web-search-2025-03-05',
     };
-    let upstream = await fetch('https://api.anthropic.com/v1/messages', {
+    const body = {
+        model:      'claude-sonnet-4-6',
+        max_tokens: maxTokens,
+        system:     [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+        messages:   [{ role: 'user', content: userMessage }],
+    };
+    if (useWebSearch) body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
+
+    const t0 = Date.now();
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST', headers, body: JSON.stringify(body),
     });
-    if (upstream.status === 429) {
-        console.log('[agent] rate limited — retrying in 10s');
-        await new Promise(r => setTimeout(r, 10000));
-        upstream = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST', headers, body: JSON.stringify(body),
-        });
+
+    if (res.status === 429 && !_retried) {
+        console.log('[callAgent] 429 — waiting 15s');
+        await delay(15000);
+        return callAgent(systemPrompt, userMessage, maxTokens, useWebSearch, true);
     }
-    const data = await upstream.json().catch(() => ({}));
-    console.log(`[agent] http:${upstream.status} stop_reason:${data.stop_reason} blocks:[${(data.content||[]).map(b=>b.type).join(',')}]`);
-    if (!upstream.ok) {
-        console.error('[agent] upstream error body:', JSON.stringify(data));
-        throw new Error(`Agent error ${upstream.status}: ${JSON.stringify(data.error || {})}`);
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        console.error('[callAgent] error:', res.status, JSON.stringify(data));
+        throw new Error(`Agent error ${res.status}: ${JSON.stringify(data.error || {})}`);
     }
+
     if (data.usage) {
         const { input_tokens: i = 0, output_tokens: o = 0, cache_creation_input_tokens: cw = 0, cache_read_input_tokens: cr = 0 } = data.usage;
-        console.log(`[agent] usage — in:${i} out:${o} cw:${cw} cr:${cr}`);
+        console.log(`[callAgent] ${Date.now() - t0}ms in:${i} out:${o} cw:${cw} cr:${cr}`);
     }
-    const rawText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
-    console.log('[agent] raw text length:', rawText.length, '| full text:\n', rawText);
-    return rawText;
+
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    console.log('[callAgent] raw:', text.slice(0, 200));
+    const parsed = parseAgentJSON(text);
+    if (parsed === null) throw new Error('Could not parse agent JSON response');
+    return parsed;
 }
 
 // ── Daily limit ───────────────────────────────────────────────────────────
@@ -189,7 +199,7 @@ app.get('/api/daily-limit', (req, res) => {
     res.json({ date: dailyUsage.date, count: dailyUsage.count, limit: 200 });
 });
 
-// Agents 1-5 (parallel track analysis) + Agent 6 (vibe synthesis)
+// ── /api/analyse — SSE: Agents 1-N (track decoders) + Agent 6 (vibe synthesiser) ──
 app.post('/api/analyse', async (req, res) => {
     if (!checkAndIncrement()) {
         return res.status(429).json({ error: { message: "We have hit today's limit. Check back tomorrow!" } });
@@ -198,59 +208,61 @@ app.post('/api/analyse', async (req, res) => {
     const songs = Array.isArray(req.body.songs) ? req.body.songs : [];
     if (songs.length === 0) return res.status(400).json({ error: { message: 'No songs provided' } });
 
-    // Shared system for Agents 1-5 — identical across parallel calls so cache hits
-    const a15System = `You are a House music expert. Analyse these tracks and return ONLY a JSON array where each element has: bpm_range, subgenre, groove, energy, vocals, instruments (array), production_era, mood, geographic_origin, artist, title. Return ONLY the JSON array. No markdown. No explanation. Start your response with [`;
-    const a15Blocks = [{ type: 'text', text: a15System, cache_control: { type: 'ephemeral' } }];
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
 
-    // Distribute songs across 5 agents using round-robin
-    const agentGroups = Array.from({ length: 5 }, () => []);
-    songs.forEach((song, i) => agentGroups[i % 5].push(song));
-    console.log('[analyse] songs:', songs.length, '| distribution:', agentGroups.map(g => g.length).join(','));
+    const sse = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} };
+
+    const trackSystem = `House music expert. Analyse this track. Return ONLY JSON: {bpm_range, subgenre, groove, energy, vocals, instruments, production_era, mood, geographic_origin, artist, title}. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {`;
+
+    const trackAnalyses = [];
 
     try {
-        // Agents 1-5 in parallel
-        const agent15Results = await Promise.all(
-            agentGroups.map(async (group, idx) => {
-                if (group.length === 0) return [];
-                const userMsg = group.map(s => {
-                    let line = `${s.artist} - ${s.title}`;
-                    if (s.lfmTags && s.lfmTags.length) line += ` [tags: ${s.lfmTags.slice(0, 3).join(', ')}]`;
-                    return line;
-                }).join('\n');
-                const maxTok = 400 * group.length;
-                console.log(`[analyse] Agent ${idx + 1} starting — songs:${group.length} maxTok:${maxTok}`);
-                const text = await callAnthropicAgent(a15Blocks, [{ role: 'user', content: userMsg }], maxTok, false);
-                console.log(`[analyse] Agent ${idx + 1} RAW:\n`, text);
-                const parsed = parseAgentJSON(text);
-                if (Array.isArray(parsed)) return parsed;
-                if (parsed && typeof parsed === 'object') return [parsed];
-                return [];
-            })
-        );
+        // Agents 1-N: sequential track decoders with 1500ms gaps
+        for (let i = 0; i < songs.length; i++) {
+            const song = songs[i];
+            const userMsg = `${song.artist} - ${song.title}${song.lfmTags?.length ? ` [tags: ${song.lfmTags.slice(0, 3).join(', ')}]` : ''}`;
 
-        const allAnalyses = agent15Results.flat();
-        console.log('[analyse] total track analyses:', allAnalyses.length);
+            sse({ step: `track-${i}`, status: 'active', label: `Decoding: ${song.artist} — ${song.title}` });
+            const t0 = Date.now();
+            console.log(`[analyse] Agent ${i + 1} (Track Decoder): ${song.artist} - ${song.title}`);
 
-        // Agent 6 — Vibe DNA Synthesiser
-        const a6System = `You are a music taste profiler. Given analyses of House tracks, synthesise the listener's taste profile. Return ONLY JSON with: vibeName (creative 3-word name), vibeDNA (2 sentence description of their taste), dimensions (array of 10 objects with name, value, detail covering: Tempo DNA, Harmonic Palette, Textural Layers, Emotional Arc, Vocal Character, Production Era, Geographic DNA, Scene Position, Listener Profile, Dancefloor Function), dominant_subgenres (array), instrument_profile (array of {instrument, prominence}), clubScene (string). Return ONLY the JSON object. No markdown. No explanation. Start your response with {`;
-        console.log('[analyse] Agent 6 starting');
-        const a6Text = await callAnthropicAgent(
-            [{ type: 'text', text: a6System, cache_control: { type: 'ephemeral' } }],
-            [{ role: 'user', content: JSON.stringify(allAnalyses) }],
-            1500, false
-        );
-        console.log('[analyse] Agent 6 RAW:\n', a6Text);
-        const vibeProfile = parseAgentJSON(a6Text) || {};
-        console.log('[analyse] Agent 6 vibeName:', vibeProfile.vibeName, '| subgenres:', vibeProfile.dominant_subgenres);
+            const analysis = await callAgent(trackSystem, userMsg, 250, false);
+            const elapsed = Date.now() - t0;
+            console.log(`[analyse] Agent ${i + 1} done in ${elapsed}ms`);
 
-        res.json({ vibe: vibeProfile });
+            trackAnalyses.push(analysis);
+            sse({ step: `track-${i}`, status: 'done', label: `Decoded: ${song.artist} — ${song.title}`, elapsed });
+
+            if (i < songs.length - 1) await delay(1500);
+        }
+
+        // Agent 6: Vibe Synthesiser
+        await delay(2000);
+        sse({ step: 'vibe', status: 'active', label: 'Synthesising your vibe DNA...' });
+        const t6 = Date.now();
+        console.log('[analyse] Agent 6 (Vibe Synthesiser) starting');
+
+        const vibeSystem = `Music taste profiler. Synthesise these House track analyses. Return ONLY JSON: {vibeName, vibeDNA, dimensions (array of exactly 10 objects each with name, value, detail), dominant_subgenres (array of 3 strings), instrument_profile (array of objects with instrument and prominence), clubScene}. Dimension names must be: Tempo DNA, Harmonic Palette, Textural Layers, Emotional Arc, Vocal Character, Production Era, Geographic DNA, Scene Position, Listener Profile, Dancefloor Function. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {`;
+
+        const vibeProfile = await callAgent(vibeSystem, JSON.stringify(trackAnalyses), 1000, false);
+        const elapsed6 = Date.now() - t6;
+        console.log(`[analyse] Agent 6 done in ${elapsed6}ms | vibeName: ${vibeProfile.vibeName}`);
+
+        sse({ step: 'vibe', status: 'done', label: 'Vibe DNA synthesised', elapsed: elapsed6 });
+        sse({ type: 'final', result: vibeProfile });
+        res.end();
+
     } catch (err) {
-        console.error('[analyse] ✗ error:', err.message, '\n', err.stack);
-        res.status(502).json({ error: { message: err.message } });
+        console.error('[analyse] error:', err.message, '\n', err.stack);
+        sse({ type: 'error', message: err.message });
+        res.end();
     }
 });
 
-// Agents 7 (prefs) + 8 (web scout) + 9 (CSV) in parallel → Agent 10 (synthesise)
+// ── /api/recommend — SSE: Agents 7-13 ────────────────────────────────────
 app.post('/api/recommend', async (req, res) => {
     if (!checkAndIncrement()) {
         return res.status(429).json({ error: { message: "We have hit today's limit. Check back tomorrow!" } });
@@ -259,97 +271,105 @@ app.post('/api/recommend', async (req, res) => {
     const { vibe = {}, preferences = {} } = req.body;
     const hasFreeText = Boolean(preferences.freeText && preferences.freeText.trim());
     const subgenres = vibe.dominant_subgenres || vibe.subgenres || [];
+    const dominantSubgenre = subgenres.slice(0, 2).join(', ') || 'house';
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const sse = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} };
 
     try {
-        // Agent 7 — Preference Interpreter
-        const a7System = `Convert these House music preference scores (1-5 scale, 3=neutral) and free text into a sonic profile. Return ONLY JSON with: groove_want (string), texture_want (string), harmony_want (string), structure_want (string), discovery_want (string), keywords (array of strings from free text), moment_context (string describing listening moment). Return ONLY the JSON object. No markdown. No explanation. Start your response with {`;
-        const a7User = JSON.stringify({
+        // Agent 7: Preference Interpreter
+        sse({ step: 'prefs', status: 'active', label: 'Mapping your preferences...' });
+        const t7 = Date.now();
+        const a7System = `Convert House music preference scores (1-5) and free text into a sonic profile. Return ONLY JSON: {groove_want, texture_want, harmony_want, structure_want, discovery_want, keywords (array of strings), moment}. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {`;
+        const prefProfile = await callAgent(a7System, JSON.stringify({
             beat_feel:        preferences.beat_feel,
             sound_texture:    preferences.sound_texture,
             emotion_hypnosis: preferences.emotion_hypnosis,
             track_journey:    preferences.track_journey,
             discovery_style:  preferences.discovery_style,
             freeText:         preferences.freeText || '',
-        });
+        }), 250, false);
+        sse({ step: 'prefs', status: 'done', label: 'Preferences mapped', elapsed: Date.now() - t7 });
 
-        // Agent 8 — Web Scout
-        const a8System = `You are a House music scout. Search for 15 real released tracks matching these subgenres and preferences. Use web search to find current releases from Beatport, Traxsource, and Resident Advisor. Include underground and emerging artists. Only recommend tracks you are highly confident exist as real releases. Return ONLY a JSON array of 15 objects: [{artist, title, subgenre, release_year, why_it_fits, confidence: "high" or "medium"}]. Return ONLY the JSON array. No markdown. No explanation. Start your response with [`;
-        const a8User = `Dominant subgenres: ${subgenres.join(', ')}\nVibe: ${vibe.vibeDNA || ''}\nPreference notes: ${preferences.freeText || 'not specified'}`;
+        // Agent 8: Beatport Scout
+        await delay(2000);
+        sse({ step: 'beatport', status: 'active', label: 'Scouting Beatport...' });
+        const t8 = Date.now();
+        const a8System = `Search Beatport for 5 real released House tracks matching this subgenre. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
+        const beatportRaw = await callAgent(a8System, `Dominant subgenre: ${dominantSubgenre}\nVibe: ${vibe.vibeDNA || ''}`, 600, true);
+        const beatportCandidates = unwrapArray(beatportRaw);
+        sse({ step: 'beatport', status: 'done', label: `Beatport scouted (${beatportCandidates.length} tracks)`, elapsed: Date.now() - t8 });
 
-        console.log('[recommend] Agents 7+8+9 starting in parallel');
+        // Agent 9: Traxsource Scout
+        await delay(5000);
+        sse({ step: 'traxsource', status: 'active', label: 'Scouting Traxsource...' });
+        const t9 = Date.now();
+        const a9System = `Search Traxsource for 5 real released House tracks matching this subgenre. Include underground artists. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
+        const traxRaw = await callAgent(a9System, `Dominant subgenre: ${dominantSubgenre}\nVibe DNA: ${vibe.vibeDNA || ''}`, 600, true);
+        const traxsourceCandidates = unwrapArray(traxRaw);
+        sse({ step: 'traxsource', status: 'done', label: `Traxsource scouted (${traxsourceCandidates.length} tracks)`, elapsed: Date.now() - t9 });
 
-        const [prefProfile, webCandidates, nicheArtists] = await Promise.all([
-            // Agent 7
-            callAnthropicAgent(
-                [{ type: 'text', text: a7System, cache_control: { type: 'ephemeral' } }],
-                [{ role: 'user', content: a7User }],
-                400, false
-            ).then(text => {
-                console.log('[recommend] Agent 7 RAW:\n', text);
-                return parseAgentJSON(text) || {};
-            }),
-            // Agent 8
-            callAnthropicAgent(
-                [{ type: 'text', text: a8System, cache_control: { type: 'ephemeral' } }],
-                [{ role: 'user', content: a8User }],
-                2000, true
-            ).then(text => {
-                console.log('[recommend] Agent 8 RAW:\n', text);
-                let c = parseAgentJSON(text);
-                if (!Array.isArray(c) && c && typeof c === 'object') {
-                    const unwrapped = Object.values(c).find(v => Array.isArray(v));
-                    if (unwrapped) c = unwrapped;
-                }
-                return Array.isArray(c) ? c : [];
-            }),
-            // Agent 9 — pure JS, zero tokens
-            Promise.resolve(getNicheArtists(subgenres)),
-        ]);
+        // Agent 10: Resident Advisor Scout
+        await delay(5000);
+        sse({ step: 'ra', status: 'active', label: 'Scouting Resident Advisor...' });
+        const t10 = Date.now();
+        const a10System = `Search Resident Advisor for 5 real released House tracks matching this taste profile. Include emerging artists. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
+        const raRaw = await callAgent(a10System, `Vibe DNA: ${vibe.vibeDNA || ''}\nPreference: ${JSON.stringify(prefProfile)}`, 600, true);
+        const raCandidates = unwrapArray(raRaw);
+        sse({ step: 'ra', status: 'done', label: `Resident Advisor scouted (${raCandidates.length} tracks)`, elapsed: Date.now() - t10 });
 
-        console.log('[recommend] Agent 7 moment_context:', prefProfile.moment_context);
-        console.log('[recommend] Agent 8 candidates:', webCandidates.length);
-        console.log('[recommend] Agent 9 niche artists:', nicheArtists.length);
+        // Agent 11: CSV Niche Matcher — pure JS, zero tokens
+        sse({ step: 'niche', status: 'active', label: 'Checking niche artist database...' });
+        const nicheArtists = getNicheArtists(subgenres);
+        console.log('[recommend] niche artists:', nicheArtists.length, '| candidates:', beatportCandidates.length + traxsourceCandidates.length + raCandidates.length);
+        sse({ step: 'niche', status: 'done', label: `${nicheArtists.length} niche artists matched`, elapsed: 0 });
 
-        // Agent 10 — Recommendation Engine
-        // Static system = consistent cache hit; dynamic weightsLine moves to user message
-        const a10System = `You are a music recommendation engine. Score each candidate track against the scoring weights specified below. Select exactly 8 highest scoring tracks. For niche artists provided, check if any fit better than web candidates and substitute if so. CRITICAL: Only recommend tracks you are highly confident exist as real released songs. Return ONLY a JSON array of exactly 8 objects: [{title, artist, subgenre, scene (one line), instruments (array), why (2 sentences mentioning specific dimensions matched), youtube_url (https://music.youtube.com/search?q=Artist+Title with spaces as +), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (string explaining which weights drove this pick)}]. Return ONLY the JSON array. No markdown. No explanation. Start your response with [`;
+        const allCandidates = [...beatportCandidates, ...traxsourceCandidates, ...raCandidates];
+
+        // Agent 12: Pre-Scorer
+        await delay(2000);
+        sse({ step: 'score', status: 'active', label: 'Scoring candidates...' });
+        const t12 = Date.now();
         const weightsLine = hasFreeText
-            ? '40% match to vibe DNA dimensions, 30% match to preference profile, 30% match to free text keywords'
-            : '57% match to vibe DNA dimensions, 43% match to preference profile';
-        const a10User = `SCORING WEIGHTS: ${weightsLine}\n\nVIBE DNA:\n${JSON.stringify(vibe)}\n\nPREFERENCE PROFILE:\n${JSON.stringify(prefProfile)}${hasFreeText ? `\n\nFREE TEXT: "${preferences.freeText}"` : ''}\n\nWEB CANDIDATES (15 tracks from Beatport/Traxsource/RA):\n${JSON.stringify(webCandidates)}\n\nNICHE ARTISTS to consider substituting if better fit:\n${nicheArtists.join(', ')}`;
+            ? '40% vibe match, 30% preference match, 30% free text match'
+            : '57% vibe match, 43% preference match';
+        const a12System = `Score these candidate tracks against this vibe DNA and preference profile. Weights: ${weightsLine}. Also check if any niche artists provided would fit better — if so add them. Return ONLY top 10 scored candidates as JSON array: [{artist, title, subgenre, score_out_of_10, why_it_fits}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
+        const a12User = `VIBE DNA: ${JSON.stringify(vibe)}\nPREFERENCE PROFILE: ${JSON.stringify(prefProfile)}${hasFreeText ? `\nFREE TEXT: "${preferences.freeText}"` : ''}\nCANDIDATES (${allCandidates.length}): ${JSON.stringify(allCandidates)}\nNICHE ARTISTS: ${nicheArtists.join(', ')}`;
+        const scoredRaw = await callAgent(a12System, a12User, 800, false);
+        const scoredCandidates = unwrapArray(scoredRaw);
+        sse({ step: 'score', status: 'done', label: `${scoredCandidates.length} candidates scored`, elapsed: Date.now() - t12 });
 
-        console.log('[recommend] Agent 10 starting — web candidates:', webCandidates.length, 'niche:', nicheArtists.length);
-        const a10Text = await callAnthropicAgent(
-            [{ type: 'text', text: a10System, cache_control: { type: 'ephemeral' } }],
-            [{ role: 'user', content: a10User }],
-            2500, false
-        );
-        console.log('[recommend] Agent 10 RAW:\n', a10Text);
-        let recommendations = parseAgentJSON(a10Text);
-        if (!Array.isArray(recommendations) && recommendations && typeof recommendations === 'object') {
-            console.log('[recommend] Agent 10 unwrapping — keys:', Object.keys(recommendations));
-            const unwrapped = Object.values(recommendations).find(v => Array.isArray(v));
-            if (unwrapped) recommendations = unwrapped;
-        }
-        if (!Array.isArray(recommendations)) recommendations = [];
-        console.log('[recommend] Agent 10 done — recommendations:', recommendations.length);
+        // Agent 13: Final Recommendation Builder
+        await delay(2000);
+        sse({ step: 'build', status: 'active', label: 'Building your playlist...' });
+        const t13 = Date.now();
+        const a13System = `You are the final recommendation engine. From these pre-scored candidates select exactly 8 best matches. For each write a compelling card. Return ONLY JSON array of exactly 8 objects: [{title, artist, subgenre, scene (one line), instruments (array of 3), why (2 sentences referencing specific vibe dimensions), youtube_url (https://music.youtube.com/search?q=Artist+Title with spaces as +), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (string: which weights drove this — vibe/preference/freetext)}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
+        const a13User = `SCORED CANDIDATES: ${JSON.stringify(scoredCandidates)}\nVIBE DNA: ${JSON.stringify(vibe)}\nPREFERENCE PROFILE: ${JSON.stringify(prefProfile)}`;
+        const recsRaw = await callAgent(a13System, a13User, 1800, false);
+        const recommendations = unwrapArray(recsRaw);
+        const elapsed13 = Date.now() - t13;
+        console.log(`[recommend] Agent 13 done in ${elapsed13}ms | tracks: ${recommendations.length}`);
+        sse({ step: 'build', status: 'done', label: 'Playlist built', elapsed: elapsed13 });
+        sse({ type: 'final', result: recommendations });
+        res.end();
 
-        res.json({ recommendations });
     } catch (err) {
-        console.error('[recommend] ✗ error:', err.message, '\n', err.stack);
-        res.status(502).json({ error: { message: err.message } });
+        console.error('[recommend] error:', err.message, '\n', err.stack);
+        sse({ type: 'error', message: err.message });
+        res.end();
     }
 });
 
-// Claude proxy — non-streaming JSON, web search enabled, niche artists injected (legacy)
+// ── Legacy Claude proxy ───────────────────────────────────────────────────
 app.post('/api/claude', async (req, res) => {
     if (!checkAndIncrement()) {
-        return res.status(429).json({
-            error: { message: "We have hit today's limit. Check back tomorrow!" }
-        });
+        return res.status(429).json({ error: { message: "We have hit today's limit. Check back tomorrow!" } });
     }
 
-    // Build system blocks array with prompt caching
     const detectedSubgenres = Array.isArray(req.body.subgenres) ? req.body.subgenres : [];
     const baseSystemText = req.body.system || '';
     let systemBlocks;
@@ -359,14 +379,10 @@ app.post('/api/claude', async (req, res) => {
         const artistText = artistTextByBucket[bucketKey] || '';
         if (artistText) {
             const artistCount = Math.min((artistsByBucket[bucketKey] || []).length, 80);
-            const nicheBlock  =
-                `\n\nNICHE ARTIST REFERENCE — ${bucketKey.replace(/_/g, ' ')} (${artistCount} curated artists):` +
-                `\nWeb search is primary. Also consider these niche specialists:\n${artistText}`;
             systemBlocks = [
                 { type: 'text', text: baseSystemText },
-                { type: 'text', text: nicheBlock, cache_control: { type: 'ephemeral' } },
+                { type: 'text', text: `\n\nNICHE ARTIST REFERENCE — ${bucketKey.replace(/_/g, ' ')} (${artistCount} curated artists):\n${artistText}`, cache_control: { type: 'ephemeral' } },
             ];
-            console.log(`[claude] injected ${artistCount} artists for bucket "${bucketKey}" (cached)`);
         } else {
             systemBlocks = [{ type: 'text', text: baseSystemText, cache_control: { type: 'ephemeral' } }];
         }
@@ -390,17 +406,14 @@ app.post('/api/claude', async (req, res) => {
     };
 
     const callAnthropic = () => fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: anthropicHeaders,
-        body: JSON.stringify(upstreamBody),
+        method: 'POST', headers: anthropicHeaders, body: JSON.stringify(upstreamBody),
     });
 
     let upstream;
     try {
         upstream = await callAnthropic();
-        // Retry once on rate limit
         if (upstream.status === 429) {
-            console.log('[claude] rate limited (429) — retrying in 10s');
+            console.log('[claude] rate limited — retrying in 10s');
             await new Promise(r => setTimeout(r, 10000));
             upstream = await callAnthropic();
         }
@@ -409,35 +422,20 @@ app.post('/api/claude', async (req, res) => {
     }
 
     const data = await upstream.json().catch(() => ({}));
-
     if (!upstream.ok) {
         console.error('[claude] upstream error:', upstream.status, JSON.stringify(data));
-        return res.status(upstream.status).json({
-            error: data.error || { message: `Upstream error ${upstream.status}` }
-        });
+        return res.status(upstream.status).json({ error: data.error || { message: `Upstream error ${upstream.status}` } });
     }
 
-    const blocks = data.content || [];
-    const blockSummary = blocks.map(b => b.type).join(', ');
-    console.log('[claude] stop_reason:', data.stop_reason, '| blocks:', blockSummary);
-
-    const fullText = blocks
-        .filter(b => b.type === 'text')
-        .map(b => b.text)
-        .join('\n');
-
+    const fullText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
     if (data.usage) {
-        const { input_tokens = 0, output_tokens = 0, cache_creation_input_tokens: cacheWrite = 0, cache_read_input_tokens: cacheRead = 0 } = data.usage;
-        console.log(`[claude] usage — input:${input_tokens} output:${output_tokens} cache_write:${cacheWrite} cache_read:${cacheRead}`);
+        const { input_tokens = 0, output_tokens = 0, cache_creation_input_tokens: cw = 0, cache_read_input_tokens: cr = 0 } = data.usage;
+        console.log(`[claude] in:${input_tokens} out:${output_tokens} cw:${cw} cr:${cr}`);
     }
-
-    const totalInputChars = JSON.stringify(upstreamBody.system || '').length + JSON.stringify(upstreamBody.messages).length;
-    console.log('[claude] total input chars sent to Anthropic:', totalInputChars);
-    console.log('[claude] sending content length:', fullText.length, '| preview:', fullText.slice(0, 120));
     res.json({ content: fullText });
 });
 
-// Last.fm proxy
+// ── Last.fm proxy ─────────────────────────────────────────────────────────
 app.get('/api/lastfm', async (req, res) => {
     const params = new URLSearchParams(req.query);
     params.set('api_key', process.env.LASTFM_API_KEY);

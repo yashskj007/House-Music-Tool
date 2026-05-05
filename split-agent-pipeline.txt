@@ -1,0 +1,134 @@
+Read CLAUDE.md for context. Implement the optimised split-agent waterfall pipeline in server.js and index.html. Every agent is tiny and focused. No single agent exceeds 4,000 tokens. Rate limit impossible to hit.
+
+HELPER FUNCTIONS in server.js:
+
+async function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function callAgent(systemPrompt, userMessage, maxTokens, useWebSearch = false) {
+  try {
+    const headers = { "Content-Type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "anthropic-beta": "prompt-caching-2024-07-31,web-search-2025-03-05" };
+    const body = { model: "claude-sonnet-4-20250514", max_tokens: maxTokens, system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }], messages: [{ role: "user", content: userMessage }] };
+    if (useWebSearch) body.tools = [{ type: "web_search_20250305", name: "web_search" }];
+    const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body: JSON.stringify(body) });
+    if (res.status === 429) { await delay(15000); return callAgent(systemPrompt, userMessage, maxTokens, useWebSearch); }
+    const data = await res.json();
+    const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
+    return JSON.parse(text.replace(/```json|```/g, "").trim());
+  } catch (err) { throw err; }
+}
+
+ROUTE POST /api/analyse (10 agents, waterfall with delays):
+
+AGENTS 1-5: Track Decoders (one per song, sequential with 1.5s delays)
+System prompt (80 tokens): "House music expert. Analyse this track. Return ONLY JSON: {bpm_range, subgenre, groove, energy, vocals, instruments, production_era, mood, geographic_origin, artist, title}"
+Max tokens: 250 each
+Delay between each: 1500ms
+Send SSE progress after each: "Decoded: {artist} - {title}"
+
+AGENT 6: Vibe Synthesiser
+Input: array of 5 track analyses
+System prompt (120 tokens): "Music taste profiler. Synthesise these 5 House track analyses. Return ONLY JSON: {vibeName, vibeDNA, dimensions (10 objects: {name, value, detail}), dominant_subgenres (array of 3), instrument_profile (array: {instrument, prominence}), clubScene}"
+Max tokens: 1000
+Delay before: 2000ms
+Send SSE progress: "Synthesising your vibe DNA..."
+
+AGENT 7: Preference Interpreter (runs after Agent 6)
+Input: 5 question scores + free text
+System prompt (80 tokens): "Convert preference scores (1-5) to sonic profile. Return ONLY JSON: {groove_want, texture_want, harmony_want, structure_want, discovery_want, keywords (array), moment}"
+Max tokens: 250
+Delay before: 1500ms
+Send SSE progress: "Mapping your preferences..."
+
+ROUTE POST /api/recommend (7 agents, waterfall with delays):
+
+AGENT 8: Beatport Scout
+Input: dominant subgenre from Agent 6
+System prompt (100 tokens): "Search Beatport for 5 real released House tracks matching this subgenre. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]"
+Web search: enabled (1 search only)
+Max tokens: 600
+Delay before: 2000ms
+Send SSE progress: "Scouting Beatport..."
+
+AGENT 9: Traxsource Scout
+Input: dominant subgenre + vibe DNA keywords
+System prompt (100 tokens): "Search Traxsource for 5 real released House tracks matching this subgenre. Include underground artists. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]"
+Web search: enabled (1 search only)
+Max tokens: 600
+Delay before: 5000ms (longer delay - web search agent needs more gap)
+Send SSE progress: "Scouting Traxsource..."
+
+AGENT 10: RA Scout
+Input: vibe DNA + preference profile
+System prompt (100 tokens): "Search Resident Advisor for 5 real released House tracks matching this taste profile. Include emerging artists. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]"
+Web search: enabled (1 search only)
+Max tokens: 600
+Delay before: 5000ms
+Send SSE progress: "Scouting Resident Advisor..."
+
+AGENT 11: CSV Niche Matcher (NO API CALL - pure server JS)
+Input: dominant subgenres from Agent 6
+Logic: match subgenres to CSV buckets, return top 30 niche artist names as array
+Zero tokens. Zero delay needed.
+Send SSE progress: "Checking niche artist database..."
+
+AGENT 12: Pre-Scorer
+Input: all candidates from Agents 8+9+10 (15 tracks total) + niche artists from Agent 11
+System prompt (150 tokens): "Score these 15 candidate tracks against this vibe DNA and preference profile. Weights: 40% vibe match, 30% preference match, 30% free text match. Also check if any niche artists provided would fit better - if so add them. Return ONLY top 10 scored candidates as JSON array: [{artist, title, subgenre, score_out_of_10, why_it_fits}]"
+Max tokens: 800
+Delay before: 2000ms
+Send SSE progress: "Scoring candidates..."
+
+AGENT 13: Final Recommendation Builder
+Input: top 10 from Agent 12 + vibe DNA + preference profile
+System prompt (200 tokens): "You are the final recommendation engine. From these pre-scored candidates select exactly 8 best matches. For each write a compelling card. Return ONLY JSON array of exactly 8: [{title, artist, subgenre, scene (one line), instruments (array of 3), why (2 sentences referencing specific vibe dimensions), youtube_url (https://music.youtube.com/search?q=Artist+Title), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (which weights drove this: vibe/preference/freetext)}]"
+Max tokens: 1800
+Delay before: 2000ms
+Send SSE progress: "Building your playlist..."
+
+TOKEN BUDGET PER AGENT:
+Agent 1-5: ~500 tokens each (input + output)
+Agent 6: ~1,500 tokens
+Agent 7: ~400 tokens
+Agent 8: ~1,500 tokens (web search result)
+Agent 9: ~1,500 tokens (web search result)
+Agent 10: ~1,500 tokens (web search result)
+Agent 11: 0 tokens
+Agent 12: ~1,500 tokens
+Agent 13: ~2,500 tokens
+TOTAL: ~13,000 tokens spread over ~60 seconds
+PEAK PER MINUTE: ~5,000 tokens (web scouts have 5s gaps between them)
+RATE LIMIT: impossible to hit even on Tier 1 (30K limit)
+
+PROGRESS DISPLAY in index.html:
+Show a vertical timeline of steps on the left side of the results area.
+Each step has: a small circle icon (grey = pending, spinning = active, gold checkmark = done), a label, and time taken when complete.
+Steps:
+1. Decode Track 1
+2. Decode Track 2
+3. Decode Track 3
+4. Decode Track 4
+5. Decode Track 5
+6. Synthesise Vibe DNA
+7. Map Preferences
+--- (after Analyse My Vibe completes, show 10-dimension results) ---
+8. Scout Beatport
+9. Scout Traxsource
+10. Scout Resident Advisor
+11. Check Niche Database
+12. Score Candidates
+13. Build Playlist
+
+SSE IMPLEMENTATION:
+Use Server-Sent Events in server.js to stream progress to browser in real time.
+In /api/analyse route: res.setHeader("Content-Type", "text/event-stream"); send data: {step, message, result} after each agent completes.
+In index.html: use EventSource to receive progress and update the timeline UI in real time.
+At the end of /api/analyse stream, send the full analysis result as the final SSE event.
+/api/recommend does the same - streams progress then sends final recommendations.
+
+CRITICAL RULES FOR ALL AGENTS:
+1. Every system prompt ends with: "Return ONLY valid JSON. No markdown fences. No explanation. Start response with { or ["
+2. Every agent has the retry logic for 429 errors (wait 15s, retry once)
+3. Every system prompt has cache_control: {type: "ephemeral"}
+4. Log start time and end time for each agent to console for debugging
+
+After implementing everything, update CLAUDE.md session log with the new architecture and commit and push.
