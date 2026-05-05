@@ -223,6 +223,82 @@ function dedupeCandidates(candidates) {
     return Array.from(seen.values());
 }
 
+// Candidate type validation — rejects artist-only and placeholder entries
+function isValidTrackCandidate(c) {
+    if (!c || typeof c !== 'object') return false;
+    if (!c.artist || typeof c.artist !== 'string' || !c.artist.trim()) return false;
+    if (!c.title  || typeof c.title  !== 'string' || !c.title.trim())  return false;
+    if (c.title.trim().toLowerCase() === c.artist.trim().toLowerCase()) return false;
+    const placeholders = ['unknown', 'untitled', 'n/a', 'null', 'undefined', 'tba', 'various'];
+    if (placeholders.includes(c.title.trim().toLowerCase())) return false;
+    if (c.title.trim().length < 2) return false;
+    return true;
+}
+
+// Split raw candidates into validated tracks and artist-only hints
+function sortCandidates(rawCandidates) {
+    const trackCandidates = [];
+    const artistHints     = [];
+    rawCandidates.forEach(c => {
+        if (isValidTrackCandidate(c)) {
+            trackCandidates.push(c);
+        } else if (c.artist && typeof c.artist === 'string' && c.artist.trim()) {
+            artistHints.push({ artist: c.artist.trim(), source: c.source, subgenre: c.subgenre });
+        }
+        // else: silently drop garbage
+    });
+    return { trackCandidates, artistHints };
+}
+
+// Enrich artist hints into real track candidates via Last.fm artist.getTopTracks
+async function enrichArtistHints(artistHints, deadline = 4000) {
+    const startTime = Date.now();
+    const enriched  = [];
+    for (const hint of artistHints.slice(0, 12)) {
+        if (Date.now() - startTime > deadline) break;
+        try {
+            const url  = `https://ws.audioscrobbler.com/2.0/?method=artist.getTopTracks&artist=${encodeURIComponent(hint.artist)}&limit=2&api_key=${process.env.LASTFM_API_KEY}&format=json`;
+            const json = await Promise.race([
+                fetch(url).then(r => r.json()),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 1500)),
+            ]);
+            const tracks = json?.toptracks?.track || [];
+            if (tracks.length > 0) {
+                enriched.push({
+                    artist:   hint.artist,
+                    title:    tracks[0].name,
+                    subgenre: hint.subgenre,
+                    source:   hint.source,
+                    tags:     [],
+                    metadata: { listeners: parseInt(tracks[0].listeners, 10) || 0 },
+                });
+            }
+        } catch { /* timeout or API error — drop this hint, continue */ }
+    }
+    console.log(JSON.stringify({
+        step:                  'artist_enrichment',
+        hints_received:        artistHints.length,
+        successfully_enriched: enriched.length,
+        duration_ms:           Date.now() - startTime,
+    }));
+    return enriched;
+}
+
+// Final output validator — filters incomplete/malformed recs before sending to browser
+function validateFinalRecommendations(recs) {
+    if (!Array.isArray(recs)) return [];
+    const valid = recs.filter(r => {
+        if (!isValidTrackCandidate(r))                         return false;
+        if (!r.youtube_url || !r.spotify_url || !r.lastfm_url) return false;
+        if (!r.why || r.why.length < 20)                       return false;
+        return true;
+    });
+    if (valid.length < recs.length) {
+        console.log(`[validateFinal] dropped ${recs.length - valid.length} invalid recs — ${valid.length} remain`);
+    }
+    return valid;
+}
+
 // Parallel discovery orchestration — all sources run simultaneously
 async function runDiscovery(subgenres, lfmSimilar) {
     const subgenreList = (subgenres || []).slice(0, 3).filter(Boolean);
@@ -265,25 +341,34 @@ async function runDiscovery(subgenres, lfmSimilar) {
         Promise.resolve(nicheCandidates),
     ]);
 
-    const candidates  = [];
-    const sourceCounts = { lastfm_tags: 0, lastfm_similar: 0, musicbrainz: 0, discogs: 0, csv_niche: 0 };
-    const sourceNames  = ['lastfm_tags', 'lastfm_similar', 'musicbrainz', 'discogs', 'csv_niche'];
+    const rawCandidates = [];
+    const sourceCounts  = { lastfm_tags: 0, lastfm_similar: 0, musicbrainz: 0, discogs: 0, csv_niche: 0 };
+    const sourceNames   = ['lastfm_tags', 'lastfm_similar', 'musicbrainz', 'discogs', 'csv_niche'];
 
     results.forEach((r, i) => {
         const name = sourceNames[i];
         if (r.status === 'fulfilled' && Array.isArray(r.value)) {
-            candidates.push(...r.value);
+            rawCandidates.push(...r.value);
             sourceCounts[name] = r.value.length;
         } else if (r.status === 'rejected') {
             console.log(`[discovery] ${name} failed:`, r.reason?.message || r.reason);
         }
     });
 
+    // Split into valid tracks and artist-only hints
+    const { trackCandidates, artistHints } = sortCandidates(rawCandidates);
     console.log(JSON.stringify({
-        step: 'discovery_complete',
+        step:          'discovery_complete',
         source_counts: sourceCounts,
-        total_candidates: candidates.length,
+        raw_total:     rawCandidates.length,
+        valid_tracks:  trackCandidates.length,
+        artist_hints:  artistHints.length,
     }));
+
+    // Enrich artist hints into real track candidates (4s budget, up to 12)
+    const enrichedTracks = await enrichArtistHints(artistHints);
+    const candidates = [...trackCandidates, ...enrichedTracks];
+    console.log(`[discovery] final pool: ${candidates.length} (${trackCandidates.length} direct + ${enrichedTracks.length} enriched)`);
 
     return { candidates, sourceCounts };
 }
@@ -390,6 +475,32 @@ function unwrapArray(v) {
     return [];
 }
 
+// ── JSON repair & schema validation ──────────────────────────────────────
+function repairJSON(text) {
+    let s = text.trim();
+    s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '');
+    const fb = s.indexOf('{') === -1 ? Infinity : s.indexOf('{');
+    const fk = s.indexOf('[') === -1 ? Infinity : s.indexOf('[');
+    const first = Math.min(fb, fk);
+    if (first !== Infinity) s = s.substring(first);
+    const last = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']'));
+    if (last !== -1) s = s.substring(0, last + 1);
+    s = s.replace(/,(\s*[}\]])/g, '$1');
+    s = s.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+    return s;
+}
+
+function validateVibeSchema(obj) {
+    const required = ['vibeName', 'vibeDNA', 'dimensions', 'dominant_subgenres', 'instrument_profile', 'clubScene'];
+    const missing = required.filter(k => !obj[k]);
+    if (missing.length) return { valid: false, error: `Missing fields: ${missing.join(', ')}` };
+    if (!Array.isArray(obj.dimensions) || obj.dimensions.length < 5)
+        return { valid: false, error: 'dimensions must be array of 5+' };
+    if (!Array.isArray(obj.dominant_subgenres) || !obj.dominant_subgenres.length)
+        return { valid: false, error: 'dominant_subgenres empty' };
+    return { valid: true };
+}
+
 // ── Agent helpers ─────────────────────────────────────────────────────────
 function parseAgentJSON(text) {
     // Try markdown fence first
@@ -482,7 +593,11 @@ async function callAgent(systemPrompt, userMessage, maxTokens, useWebSearch = fa
 
     const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
     console.log('[callAgent] raw:', text.slice(0, 200));
-    const parsed = parseAgentJSON(text);
+    let parsed = parseAgentJSON(text);
+    if (parsed === null) {
+        console.log('[callAgent] initial parse failed — attempting repairJSON');
+        parsed = parseAgentJSON(repairJSON(text));
+    }
     if (parsed === null) throw new Error('Could not parse agent JSON response');
     return parsed;
 }
@@ -556,9 +671,31 @@ app.post('/api/analyse', async (req, res) => {
         const t6 = Date.now();
         console.log('[analyse] Agent 6 (Vibe Synthesiser) starting');
 
-        const vibeSystem = `Music taste profiler. Synthesise these House track analyses. Return ONLY JSON: {vibeName, vibeDNA, dimensions (array of exactly 10 objects each with name, value, detail), dominant_subgenres (array of 3 strings), instrument_profile (array of objects with instrument and prominence), clubScene}. Dimension names must be: Tempo DNA, Harmonic Palette, Textural Layers, Emotional Arc, Vocal Character, Production Era, Geographic DNA, Scene Position, Listener Profile, Dancefloor Function. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {`;
+        const vibeSystem = `Music taste profiler. Synthesise these House track analyses. Return ONLY JSON: {vibeName, vibeDNA, dimensions (array of exactly 10 objects each with name, value, detail), dominant_subgenres (array of 3 strings), instrument_profile (array of objects with instrument and prominence), clubScene}. Dimension names must be: Tempo DNA, Harmonic Palette, Textural Layers, Emotional Arc, Vocal Character, Production Era, Geographic DNA, Scene Position, Listener Profile, Dancefloor Function. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {
 
-        const vibeProfile = await callAgentWithTimeout(vibeSystem, JSON.stringify(trackAnalyses), 1500, false, 25000);
+Output format requirements (strict):
+- Return ONLY a single JSON object. No prose. No markdown fences. No explanation.
+- Start your response with { and end with }
+- All string values must use double quotes
+- No trailing commas
+- All field names must match the schema exactly
+
+Example of valid output:
+{"vibeName":"Sunset Boulevard Cruiser","vibeDNA":"Two sentences here.","dimensions":[{"name":"Tempo DNA","value":"122 BPM","detail":"Steady mid-tempo groove"}],"dominant_subgenres":["Deep House","Afro House"],"instrument_profile":[{"instrument":"Rhodes","prominence":"high"}],"clubScene":"Late-night rooftop sessions"}`;
+
+        let vibeProfile;
+        const vibeUserMsg = JSON.stringify(trackAnalyses);
+        for (let attempt = 0; attempt < 2; attempt++) {
+            if (attempt > 0) {
+                console.log('[analyse] Agent 6 schema retry — waiting 1500ms');
+                await delay(1500);
+            }
+            const profile = await callAgentWithTimeout(vibeSystem, vibeUserMsg, 1500, false, 25000);
+            const check = validateVibeSchema(profile);
+            console.log(`[analyse] Agent 6 attempt ${attempt + 1}: schema ${check.valid ? 'valid' : 'INVALID — ' + check.error}`);
+            if (check.valid) { vibeProfile = profile; break; }
+            if (attempt === 1) throw new Error(`Agent 6 schema validation failed: ${check.error}`);
+        }
         const elapsed6 = Date.now() - t6;
         console.log(`[analyse] Agent 6 done in ${elapsed6}ms | vibeName: ${vibeProfile.vibeName}`);
 
@@ -746,8 +883,15 @@ app.post('/api/recommend', async (req, res) => {
         console.log(`[recommend] done in ${Date.now() - pipelineStart}ms | tracks: ${recommendations.length} | confidence: ${JSON.stringify(confidence)}`);
 
         jobState.finalRecommendations = recommendations;
+
+        // Final validation — filter out any recs missing required fields
+        const finalOutput = validateFinalRecommendations(recommendations);
+        if (finalOutput.length < 6) {
+            console.log(`[recommend] WARNING: only ${finalOutput.length} valid recs after final validation (degraded mode)`);
+        }
+
         sendSSE(res, { step: 'build', status: 'done', label: 'Playlist built', elapsed: d13 });
-        sendSSE(res, { type: 'final', result: recommendations });
+        sendSSE(res, { type: 'final', result: finalOutput.length > 0 ? finalOutput : recommendations });
         clearInterval(keepalive);
         res.end();
 
