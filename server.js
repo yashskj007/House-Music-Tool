@@ -147,12 +147,18 @@ async function callAnthropicAgent(systemBlocks, messages, maxTokens, useWebSearc
         });
     }
     const data = await upstream.json().catch(() => ({}));
-    if (!upstream.ok) throw new Error(`Agent error ${upstream.status}: ${JSON.stringify(data.error || {})}`);
+    console.log(`[agent] http:${upstream.status} stop_reason:${data.stop_reason} blocks:[${(data.content||[]).map(b=>b.type).join(',')}]`);
+    if (!upstream.ok) {
+        console.error('[agent] upstream error body:', JSON.stringify(data));
+        throw new Error(`Agent error ${upstream.status}: ${JSON.stringify(data.error || {})}`);
+    }
     if (data.usage) {
         const { input_tokens: i = 0, output_tokens: o = 0, cache_creation_input_tokens: cw = 0, cache_read_input_tokens: cr = 0 } = data.usage;
         console.log(`[agent] usage — in:${i} out:${o} cw:${cw} cr:${cr}`);
     }
-    return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+    const rawText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+    console.log('[agent] raw text length:', rawText.length, '| full text:\n', rawText);
+    return rawText;
 }
 
 // ── Daily limit ───────────────────────────────────────────────────────────
@@ -184,11 +190,12 @@ app.post('/api/analyse', async (req, res) => {
     }
     try {
         const systemBlocks = [{ type: 'text', text: req.body.system || '', cache_control: { type: 'ephemeral' } }];
+        console.log('[analyse] calling Anthropic — system chars:', (req.body.system || '').length, 'messages:', req.body.messages?.length);
         const text = await callAnthropicAgent(systemBlocks, req.body.messages, req.body.max_tokens || 1500, false);
-        console.log('[analyse] response length:', text.length);
+        console.log('[analyse] ✓ response length:', text.length);
         res.json({ content: text });
     } catch (err) {
-        console.error('[analyse] error:', err.message);
+        console.error('[analyse] ✗ error:', err.message, '\n', err.stack);
         res.status(502).json({ error: { message: err.message } });
     }
 });
@@ -213,14 +220,15 @@ app.post('/api/recommend', async (req, res) => {
             discovery_style:  preferences.discovery_style,
             freeText:         preferences.freeText || '',
         });
-        console.log('[recommend] Agent 2 starting');
+        console.log('[recommend] Agent 2 starting — user input:', a2User);
         const a2Text    = await callAnthropicAgent(
             [{ type: 'text', text: a2System, cache_control: { type: 'ephemeral' } }],
             [{ role: 'user', content: a2User }],
             500, false
         );
+        console.log('[recommend] Agent 2 RAW:\n', a2Text);
         const prefProfile = parseAgentJSON(a2Text) || {};
-        console.log('[recommend] Agent 2 done — direction:', prefProfile.overall_vibe_direction);
+        console.log('[recommend] Agent 2 parsed:', JSON.stringify(prefProfile));
 
         // ── Agent 3: Artist Scout (web search + CSV injection) ───────────
         const bucketKey   = subgenresToBucketKey(vibe.subgenres || []);
@@ -243,15 +251,17 @@ app.post('/api/recommend', async (req, res) => {
 Vibe: ${vibe.vibeDNA || ''}
 Preference direction: ${prefProfile.overall_vibe_direction || ''}${lfmLines.length ? '\n\n' + lfmLines.join('\n') : ''}`;
 
-        console.log('[recommend] Agent 3 starting');
+        console.log('[recommend] Agent 3 starting — bucket:', bucketKey, 'artists injected:', artistCount, '\nuser prompt:\n', a3User);
         const a3Text = await callAnthropicAgent(a3SystemBlocks, [{ role: 'user', content: a3User }], 2000, true);
+        console.log('[recommend] Agent 3 RAW:\n', a3Text);
         let candidates = parseAgentJSON(a3Text);
         if (!Array.isArray(candidates) && candidates && typeof candidates === 'object') {
+            console.log('[recommend] Agent 3 unwrapping object — keys:', Object.keys(candidates));
             const unwrapped = Object.values(candidates).find(v => Array.isArray(v));
             if (unwrapped) candidates = unwrapped;
         }
         if (!Array.isArray(candidates)) candidates = [];
-        console.log('[recommend] Agent 3 done — candidates:', candidates.length);
+        console.log('[recommend] Agent 3 parsed — candidates:', candidates.length);
 
         // ── Agent 4: Recommendation Synthesiser ─────────────────────────
         const weightsLine = hasFreeText
@@ -286,17 +296,19 @@ ${JSON.stringify(candidates)}`;
             [{ role: 'user', content: a4User }],
             2000, false
         );
+        console.log('[recommend] Agent 4 RAW:\n', a4Text);
         let recommendations = parseAgentJSON(a4Text);
         if (!Array.isArray(recommendations) && recommendations && typeof recommendations === 'object') {
+            console.log('[recommend] Agent 4 unwrapping object — keys:', Object.keys(recommendations));
             const unwrapped = Object.values(recommendations).find(v => Array.isArray(v));
             if (unwrapped) recommendations = unwrapped;
         }
         if (!Array.isArray(recommendations)) recommendations = [];
-        console.log('[recommend] Agent 4 done — recommendations:', recommendations.length);
+        console.log('[recommend] Agent 4 parsed — recommendations:', recommendations.length);
 
         res.json({ preferenceProfile: prefProfile, recommendations });
     } catch (err) {
-        console.error('[recommend] error:', err.message);
+        console.error('[recommend] ✗ error:', err.message, '\n', err.stack);
         res.status(502).json({ error: { message: err.message } });
     }
 });
