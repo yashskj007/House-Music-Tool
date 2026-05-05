@@ -101,6 +101,12 @@ for (const [key, artists] of Object.entries(artistsByBucket)) {
     artistTextByBucket[key] = artists.slice(0, 80).join(', ');
 }
 
+// Agent 9: pure JS CSV matcher — zero tokens
+function getNicheArtists(subgenres) {
+    const bucketKey = subgenresToBucketKey(subgenres || []);
+    return (artistsByBucket[bucketKey] || []).slice(0, 40);
+}
+
 // ── Agent helpers ─────────────────────────────────────────────────────────
 function parseAgentJSON(text) {
     const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -183,36 +189,81 @@ app.get('/api/daily-limit', (req, res) => {
     res.json({ date: dailyUsage.date, count: dailyUsage.count, limit: 200 });
 });
 
-// Agent 1 proxy — no web search, no artist injection
+// Agents 1-5 (parallel track analysis) + Agent 6 (vibe synthesis)
 app.post('/api/analyse', async (req, res) => {
     if (!checkAndIncrement()) {
         return res.status(429).json({ error: { message: "We have hit today's limit. Check back tomorrow!" } });
     }
+
+    const songs = Array.isArray(req.body.songs) ? req.body.songs : [];
+    if (songs.length === 0) return res.status(400).json({ error: { message: 'No songs provided' } });
+
+    // Shared system for Agents 1-5 — identical across parallel calls so cache hits
+    const a15System = `You are a House music expert. Analyse these tracks and return ONLY a JSON array where each element has: bpm_range, subgenre, groove, energy, vocals, instruments (array), production_era, mood, geographic_origin, artist, title. Return ONLY the JSON array. No markdown. No explanation. Start your response with [`;
+    const a15Blocks = [{ type: 'text', text: a15System, cache_control: { type: 'ephemeral' } }];
+
+    // Distribute songs across 5 agents using round-robin
+    const agentGroups = Array.from({ length: 5 }, () => []);
+    songs.forEach((song, i) => agentGroups[i % 5].push(song));
+    console.log('[analyse] songs:', songs.length, '| distribution:', agentGroups.map(g => g.length).join(','));
+
     try {
-        const systemBlocks = [{ type: 'text', text: req.body.system || '', cache_control: { type: 'ephemeral' } }];
-        console.log('[analyse] calling Anthropic — system chars:', (req.body.system || '').length, 'messages:', req.body.messages?.length);
-        const text = await callAnthropicAgent(systemBlocks, req.body.messages, req.body.max_tokens || 1500, false);
-        console.log('[analyse] ✓ response length:', text.length);
-        res.json({ content: text });
+        // Agents 1-5 in parallel
+        const agent15Results = await Promise.all(
+            agentGroups.map(async (group, idx) => {
+                if (group.length === 0) return [];
+                const userMsg = group.map(s => {
+                    let line = `${s.artist} - ${s.title}`;
+                    if (s.lfmTags && s.lfmTags.length) line += ` [tags: ${s.lfmTags.slice(0, 3).join(', ')}]`;
+                    return line;
+                }).join('\n');
+                const maxTok = 400 * group.length;
+                console.log(`[analyse] Agent ${idx + 1} starting — songs:${group.length} maxTok:${maxTok}`);
+                const text = await callAnthropicAgent(a15Blocks, [{ role: 'user', content: userMsg }], maxTok, false);
+                console.log(`[analyse] Agent ${idx + 1} RAW:\n`, text);
+                const parsed = parseAgentJSON(text);
+                if (Array.isArray(parsed)) return parsed;
+                if (parsed && typeof parsed === 'object') return [parsed];
+                return [];
+            })
+        );
+
+        const allAnalyses = agent15Results.flat();
+        console.log('[analyse] total track analyses:', allAnalyses.length);
+
+        // Agent 6 — Vibe DNA Synthesiser
+        const a6System = `You are a music taste profiler. Given analyses of House tracks, synthesise the listener's taste profile. Return ONLY JSON with: vibeName (creative 3-word name), vibeDNA (2 sentence description of their taste), dimensions (array of 10 objects with name, value, detail covering: Tempo DNA, Harmonic Palette, Textural Layers, Emotional Arc, Vocal Character, Production Era, Geographic DNA, Scene Position, Listener Profile, Dancefloor Function), dominant_subgenres (array), instrument_profile (array of {instrument, prominence}), clubScene (string). Return ONLY the JSON object. No markdown. No explanation. Start your response with {`;
+        console.log('[analyse] Agent 6 starting');
+        const a6Text = await callAnthropicAgent(
+            [{ type: 'text', text: a6System, cache_control: { type: 'ephemeral' } }],
+            [{ role: 'user', content: JSON.stringify(allAnalyses) }],
+            1500, false
+        );
+        console.log('[analyse] Agent 6 RAW:\n', a6Text);
+        const vibeProfile = parseAgentJSON(a6Text) || {};
+        console.log('[analyse] Agent 6 vibeName:', vibeProfile.vibeName, '| subgenres:', vibeProfile.dominant_subgenres);
+
+        res.json({ vibe: vibeProfile });
     } catch (err) {
         console.error('[analyse] ✗ error:', err.message, '\n', err.stack);
         res.status(502).json({ error: { message: err.message } });
     }
 });
 
-// Recommendation pipeline — Agent 2 (preferences) → Agent 3 (scout) → Agent 4 (synthesise)
+// Agents 7 (prefs) + 8 (web scout) + 9 (CSV) in parallel → Agent 10 (synthesise)
 app.post('/api/recommend', async (req, res) => {
     if (!checkAndIncrement()) {
         return res.status(429).json({ error: { message: "We have hit today's limit. Check back tomorrow!" } });
     }
 
-    const { vibe = {}, preferences = {}, lfmSimilar = [] } = req.body;
+    const { vibe = {}, preferences = {} } = req.body;
     const hasFreeText = Boolean(preferences.freeText && preferences.freeText.trim());
+    const subgenres = vibe.dominant_subgenres || vibe.subgenres || [];
 
     try {
-        // ── Agent 2: Preference Interpreter ─────────────────────────────
-        const a2System = `You are a music taste interpreter. Convert these preference scores (1–5, 3=neutral) and optional description into a compact sonic preference profile. Return ONLY valid JSON: {"groove_preference":"string","texture_preference":"string","harmony_preference":"string","structure_preference":"string","discovery_preference":"string","free_text_keywords":[],"overall_vibe_direction":"string"}`;
-        const a2User   = JSON.stringify({
+        // Agent 7 — Preference Interpreter
+        const a7System = `Convert these House music preference scores (1-5 scale, 3=neutral) and free text into a sonic profile. Return ONLY JSON with: groove_want (string), texture_want (string), harmony_want (string), structure_want (string), discovery_want (string), keywords (array of strings from free text), moment_context (string describing listening moment). Return ONLY the JSON object. No markdown. No explanation. Start your response with {`;
+        const a7User = JSON.stringify({
             beat_feel:        preferences.beat_feel,
             sound_texture:    preferences.sound_texture,
             emotion_hypnosis: preferences.emotion_hypnosis,
@@ -220,93 +271,69 @@ app.post('/api/recommend', async (req, res) => {
             discovery_style:  preferences.discovery_style,
             freeText:         preferences.freeText || '',
         });
-        console.log('[recommend] Agent 2 starting — user input:', a2User);
-        const a2Text    = await callAnthropicAgent(
-            [{ type: 'text', text: a2System, cache_control: { type: 'ephemeral' } }],
-            [{ role: 'user', content: a2User }],
-            500, false
-        );
-        console.log('[recommend] Agent 2 RAW:\n', a2Text);
-        const prefProfile = parseAgentJSON(a2Text) || {};
-        console.log('[recommend] Agent 2 parsed:', JSON.stringify(prefProfile));
 
-        // ── Agent 3: Artist Scout (web search + CSV injection) ───────────
-        const bucketKey   = subgenresToBucketKey(vibe.subgenres || []);
-        const artistText  = artistTextByBucket[bucketKey] || '';
-        const artistCount = Math.min((artistsByBucket[bucketKey] || []).length, 80);
-        const a3BaseText  = `You are a House music scout. Given these detected subgenres, preference profile, and niche artist reference, find 15–20 candidate tracks. Use web search to find current and recent releases. Include underground and emerging artists — do not default to famous names only. Return ONLY valid JSON array: [{"artist":"","track":"","subgenre":"","why_it_fits":""}]`;
-        const a3SystemBlocks = artistText
-            ? [
-                { type: 'text', text: a3BaseText },
-                { type: 'text', text: `\n\nNICHE ARTIST REFERENCE — ${bucketKey.replace(/_/g, ' ')} (${artistCount} curated artists):\nAlso consider these niche specialists:\n${artistText}`, cache_control: { type: 'ephemeral' } },
-              ]
-            : [{ type: 'text', text: a3BaseText, cache_control: { type: 'ephemeral' } }];
+        // Agent 8 — Web Scout
+        const a8System = `You are a House music scout. Search for 15 real released tracks matching these subgenres and preferences. Use web search to find current releases from Beatport, Traxsource, and Resident Advisor. Include underground and emerging artists. Only recommend tracks you are highly confident exist as real releases. Return ONLY a JSON array of 15 objects: [{artist, title, subgenre, release_year, why_it_fits, confidence: "high" or "medium"}]. Return ONLY the JSON array. No markdown. No explanation. Start your response with [`;
+        const a8User = `Dominant subgenres: ${subgenres.join(', ')}\nVibe: ${vibe.vibeDNA || ''}\nPreference notes: ${preferences.freeText || 'not specified'}`;
 
-        const lfmLines = [];
-        if (lfmSimilar.length) {
-            lfmLines.push('Last.fm similar artists:');
-            lfmSimilar.forEach(s => lfmLines.push(`  ${s.artist} → ${(s.similar || []).slice(0, 5).join(', ')}`));
-        }
-        const a3User = `Detected subgenres: ${(vibe.subgenres || []).join(', ')}
-Vibe: ${vibe.vibeDNA || ''}
-Preference direction: ${prefProfile.overall_vibe_direction || ''}${lfmLines.length ? '\n\n' + lfmLines.join('\n') : ''}`;
+        console.log('[recommend] Agents 7+8+9 starting in parallel');
 
-        console.log('[recommend] Agent 3 starting — bucket:', bucketKey, 'artists injected:', artistCount, '\nuser prompt:\n', a3User);
-        const a3Text = await callAnthropicAgent(a3SystemBlocks, [{ role: 'user', content: a3User }], 2000, true);
-        console.log('[recommend] Agent 3 RAW:\n', a3Text);
-        let candidates = parseAgentJSON(a3Text);
-        if (!Array.isArray(candidates) && candidates && typeof candidates === 'object') {
-            console.log('[recommend] Agent 3 unwrapping object — keys:', Object.keys(candidates));
-            const unwrapped = Object.values(candidates).find(v => Array.isArray(v));
-            if (unwrapped) candidates = unwrapped;
-        }
-        if (!Array.isArray(candidates)) candidates = [];
-        console.log('[recommend] Agent 3 parsed — candidates:', candidates.length);
+        const [prefProfile, webCandidates, nicheArtists] = await Promise.all([
+            // Agent 7
+            callAnthropicAgent(
+                [{ type: 'text', text: a7System, cache_control: { type: 'ephemeral' } }],
+                [{ role: 'user', content: a7User }],
+                400, false
+            ).then(text => {
+                console.log('[recommend] Agent 7 RAW:\n', text);
+                return parseAgentJSON(text) || {};
+            }),
+            // Agent 8
+            callAnthropicAgent(
+                [{ type: 'text', text: a8System, cache_control: { type: 'ephemeral' } }],
+                [{ role: 'user', content: a8User }],
+                2000, true
+            ).then(text => {
+                console.log('[recommend] Agent 8 RAW:\n', text);
+                let c = parseAgentJSON(text);
+                if (!Array.isArray(c) && c && typeof c === 'object') {
+                    const unwrapped = Object.values(c).find(v => Array.isArray(v));
+                    if (unwrapped) c = unwrapped;
+                }
+                return Array.isArray(c) ? c : [];
+            }),
+            // Agent 9 — pure JS, zero tokens
+            Promise.resolve(getNicheArtists(subgenres)),
+        ]);
 
-        // ── Agent 4: Recommendation Synthesiser ─────────────────────────
+        console.log('[recommend] Agent 7 moment_context:', prefProfile.moment_context);
+        console.log('[recommend] Agent 8 candidates:', webCandidates.length);
+        console.log('[recommend] Agent 9 niche artists:', nicheArtists.length);
+
+        // Agent 10 — Recommendation Engine
         const weightsLine = hasFreeText
-            ? 'Weight A (vibe DNA): 40% · Weight B (preference profile): 30% · Weight C (free text): 30%'
-            : 'Weight A (vibe DNA): 57% · Weight B (preference profile): 43%';
-        const dimSummary   = (vibe.dimensions || []).map(d => `${d.id}: ${d.value}`).join('\n');
-        const instrSummary = (vibe.instrumentProfile || [])
-            .filter(i => i.prominence && i.prominence !== 'None')
-            .map(i => `${i.name}: ${i.prominence}`)
-            .join(', ');
+            ? '40% match to vibe DNA dimensions, 30% match to preference profile, 30% match to free text keywords'
+            : '57% match to vibe DNA dimensions, 43% match to preference profile';
+        const a10System = `You are a music recommendation engine. Score each candidate track against these weights: ${weightsLine}. Select exactly 8 highest scoring tracks. For niche artists provided, check if any fit better than web candidates and substitute if so. CRITICAL: Only recommend tracks you are highly confident exist as real released songs. Return ONLY a JSON array of exactly 8 objects: [{title, artist, subgenre, scene (one line), instruments (array), why (2 sentences mentioning specific dimensions matched), youtube_url (https://music.youtube.com/search?q=Artist+Title with spaces as +), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (string explaining which weights drove this pick)}]. Return ONLY the JSON array. No markdown. No explanation. Start your response with [`;
+        const a10User = `VIBE DNA:\n${JSON.stringify(vibe)}\n\nPREFERENCE PROFILE:\n${JSON.stringify(prefProfile)}${hasFreeText ? `\n\nFREE TEXT: "${preferences.freeText}"` : ''}\n\nWEB CANDIDATES (15 tracks from Beatport/Traxsource/RA):\n${JSON.stringify(webCandidates)}\n\nNICHE ARTISTS to consider substituting if better fit:\n${nicheArtists.join(', ')}`;
 
-        const a4System = `You are a music recommendation engine. Score each candidate track against the weights below and select the 6–8 highest-scoring tracks. CRITICAL: Only recommend tracks you are highly confident exist as real released songs — if unsure of a title, use that artist's most well-known confirmed track. Return ONLY valid JSON array: [{"title":"","artist":"","subgenre":"","sceneEra":"","instrumentMatch":"","weightMatch":"","why":"two sentences: first connects dominant dimension matches, second explains preference fit","dimensionMatches":[]}]`;
-        const a4User = `SCORING WEIGHTS: ${weightsLine}
-
-WEIGHT A — VIBE DNA:
-${vibe.vibeDNA || ''}
-Subgenres: ${(vibe.subgenres || []).join(', ')}
-Energy: ${vibe.energyLevel || ''} · BPM: ${vibe.bpmRange || ''}
-Dimensions:
-${dimSummary}
-Instrumentation: ${instrSummary || 'not available'}
-
-WEIGHT B — PREFERENCE PROFILE:
-${JSON.stringify(prefProfile)}
-${hasFreeText ? `\nWEIGHT C — FREE TEXT: "${preferences.freeText}"` : ''}
-CANDIDATES:
-${JSON.stringify(candidates)}`;
-
-        console.log('[recommend] Agent 4 starting — candidates:', candidates.length);
-        const a4Text = await callAnthropicAgent(
-            [{ type: 'text', text: a4System, cache_control: { type: 'ephemeral' } }],
-            [{ role: 'user', content: a4User }],
-            2000, false
+        console.log('[recommend] Agent 10 starting — web candidates:', webCandidates.length, 'niche:', nicheArtists.length);
+        const a10Text = await callAnthropicAgent(
+            [{ type: 'text', text: a10System, cache_control: { type: 'ephemeral' } }],
+            [{ role: 'user', content: a10User }],
+            2500, false
         );
-        console.log('[recommend] Agent 4 RAW:\n', a4Text);
-        let recommendations = parseAgentJSON(a4Text);
+        console.log('[recommend] Agent 10 RAW:\n', a10Text);
+        let recommendations = parseAgentJSON(a10Text);
         if (!Array.isArray(recommendations) && recommendations && typeof recommendations === 'object') {
-            console.log('[recommend] Agent 4 unwrapping object — keys:', Object.keys(recommendations));
+            console.log('[recommend] Agent 10 unwrapping — keys:', Object.keys(recommendations));
             const unwrapped = Object.values(recommendations).find(v => Array.isArray(v));
             if (unwrapped) recommendations = unwrapped;
         }
         if (!Array.isArray(recommendations)) recommendations = [];
-        console.log('[recommend] Agent 4 parsed — recommendations:', recommendations.length);
+        console.log('[recommend] Agent 10 done — recommendations:', recommendations.length);
 
-        res.json({ preferenceProfile: prefProfile, recommendations });
+        res.json({ recommendations });
     } catch (err) {
         console.error('[recommend] ✗ error:', err.message, '\n', err.stack);
         res.status(502).json({ error: { message: err.message } });

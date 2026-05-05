@@ -357,12 +357,12 @@
             <span class="logo-wordmark">Resonance Engine</span>
         </div>
         <h1>House Music<br>Resonance Engine</h1>
-        <p class="subtitle">Drop 5 tracks &mdash; we'll decode your sonic identity across 10 dimensions.</p>
+        <p class="subtitle">Drop 5–10 tracks &mdash; we'll decode your sonic identity across 10 dimensions.</p>
     </div>
 
     <div class="card">
         <div class="field">
-            <label><span class="dot"></span>Your 5 House Tracks</label>
+            <label><span class="dot"></span>Your House Tracks (5–10)</label>
             <textarea id="songs" placeholder="Solomun - Welcome To The Wild&#10;Jamie Jones - My Paradise&#10;Fisher - Losing It&#10;Peggy Gou - It Makes You Forget (Itgehane)&#10;Chris Liebing - Stalker"></textarea>
             <div class="hint">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.45"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -411,16 +411,16 @@
 
     // ── Data ──────────────────────────────────────────────────────
     const DIMENSION_META = [
-        { id: 'tempo',       label: 'Tempo & Rhythm DNA'       },
-        { id: 'harmonic',    label: 'Harmonic Palette'          },
-        { id: 'texture',     label: 'Textural Layers'           },
-        { id: 'emotional',   label: 'Emotional Arc'             },
-        { id: 'vocal',       label: 'Vocal Character'           },
-        { id: 'production',  label: 'Production Era & Design'   },
-        { id: 'geographic',  label: 'Geographic & Cultural DNA' },
-        { id: 'scene',       label: 'Cultural & Scene Position' },
-        { id: 'listener',    label: 'Listener Profile'          },
-        { id: 'dancefloor',  label: 'Dancefloor Function'       },
+        { id: 'tempo',       label: 'Tempo & Rhythm DNA',       name: 'Tempo DNA'           },
+        { id: 'harmonic',    label: 'Harmonic Palette',          name: 'Harmonic Palette'    },
+        { id: 'texture',     label: 'Textural Layers',           name: 'Textural Layers'     },
+        { id: 'emotional',   label: 'Emotional Arc',             name: 'Emotional Arc'       },
+        { id: 'vocal',       label: 'Vocal Character',           name: 'Vocal Character'     },
+        { id: 'production',  label: 'Production Era & Design',   name: 'Production Era'      },
+        { id: 'geographic',  label: 'Geographic & Cultural DNA', name: 'Geographic DNA'      },
+        { id: 'scene',       label: 'Cultural & Scene Position', name: 'Scene Position'      },
+        { id: 'listener',    label: 'Listener Profile',          name: 'Listener Profile'    },
+        { id: 'dancefloor',  label: 'Dancefloor Function',       name: 'Dancefloor Function' },
     ];
 
     const QUESTIONS = [
@@ -683,8 +683,12 @@
         const results = document.getElementById('resultsArea');
 
         const tracks = parseTracks(rawText);
-        if (!tracks.length) {
-            results.innerHTML = '<div class="error">Please enter at least one track in the format <em>Artist - Song Title</em>.</div>';
+        if (tracks.length < 5) {
+            results.innerHTML = '<div class="error">Please enter at least 5 tracks in the format <em>Artist - Song Title</em>.</div>';
+            return;
+        }
+        if (tracks.length > 10) {
+            results.innerHTML = '<div class="error">Maximum 10 tracks supported. Please remove some.</div>';
             return;
         }
 
@@ -696,84 +700,73 @@
         document.getElementById('songsArea').innerHTML = '';
         lastVibe = null;
 
+        // Cycling loader: per-track decode messages then synthesis
+        const spinnerHtml = '<div class="spinner"></div>';
+        const analyseMsgs = [
+            ...tracks.map((_, i) => `Decoding Track ${i + 1}…`),
+            'Synthesising your DNA…',
+            'Almost there…',
+        ];
+        let msgIdx = 0;
+        const setStatus = msg => { results.innerHTML = `<div class="status-msg">${spinnerHtml} ${esc(msg)}</div>`; };
+        setStatus(analyseMsgs[0]);
+        const cycleTimer = setInterval(() => {
+            msgIdx = (msgIdx + 1) % analyseMsgs.length;
+            setStatus(analyseMsgs[msgIdx]);
+        }, 4000);
+
         const [lfmData, lfmSimilar] = await Promise.all([
             fetchLastFmData(tracks),
             fetchLastFmSimilar(tracks)
         ]);
-        const trackList = tracks.map((t, i) => `${i + 1}. ${t.artist} - ${t.title}`).join('\n');
 
-        let lfmContext = '';
-        if (lfmData && lfmData.some(Boolean)) {
-            lfmContext = '\n\nLast.fm data:\n';
-            lfmData.forEach((d, i) => {
-                if (!d) return;
-                lfmContext += `${i + 1}. ${d.artist} - ${d.title}: ${d.listeners.toLocaleString()} listeners. Tags: ${d.tags.join(', ') || 'n/a'}\n`;
-            });
+        const songs = tracks.map((t, i) => ({
+            artist:       t.artist,
+            title:        t.title,
+            lfmTags:      (lfmData[i]?.tags || []).slice(0, 3),
+            lfmListeners: lfmData[i]?.listeners || 0,
+        }));
+
+        if (checkDailyLimit()) {
+            clearInterval(cycleTimer);
+            results.innerHTML = `<div class="error">We have hit today's limit. Check back tomorrow!</div>`;
+            btn.disabled = false;
+            document.getElementById('btnInner').innerHTML = `${waveHtml} Analyse My Vibe`;
+            return;
         }
-
-        const system = `You are a house music curator and DJ with deep knowledge of subgenres, labels, and club culture.`;
-
-        const user = `Analyse these tracks across 10 dimensions and instrument profile. Return ONLY valid JSON.
-
-Tracks:
-${trackList}${lfmContext}
-
-{
-  "vibeName": "Evocative short name",
-  "vibeDNA": "3-4 sentence taste fingerprint",
-  "dimensions": [
-    { "id": "tempo",      "value": "BPM & groove",      "detail": "Rhythmic feel." },
-    { "id": "harmonic",   "value": "Keys & modes",       "detail": "Harmonic language." },
-    { "id": "texture",    "value": "Layers & design",    "detail": "Sonic density." },
-    { "id": "emotional",  "value": "Emotional arc",      "detail": "Emotional journey." },
-    { "id": "vocal",      "value": "Vocal style",        "detail": "Vocal use." },
-    { "id": "production", "value": "Era & synthesis",    "detail": "Production era." },
-    { "id": "geographic", "value": "City/region",        "detail": "Cultural origins." },
-    { "id": "scene",      "value": "Scene positioning",  "detail": "Underground level." },
-    { "id": "listener",   "value": "Listener archetype${lfmData && lfmData.some(Boolean) ? ' (use Last.fm counts)' : ''}", "detail": "Who listens." },
-    { "id": "dancefloor", "value": "Time & venue",       "detail": "Floor energy." }
-  ],
-  "instrumentProfile": [
-    {"name":"Kick & sub bass","prominence":"None|Low|Medium|High"},
-    {"name":"Hi-hats & percussion","prominence":"None|Low|Medium|High"},
-    {"name":"Bassline (melodic)","prominence":"None|Low|Medium|High"},
-    {"name":"Synth pads & chords","prominence":"None|Low|Medium|High"},
-    {"name":"Piano & keys","prominence":"None|Low|Medium|High"},
-    {"name":"Organic percussion","prominence":"None|Low|Medium|High"},
-    {"name":"Strings & orchestral","prominence":"None|Low|Medium|High"},
-    {"name":"Vocals","prominence":"None|Low|Medium|High"},
-    {"name":"Guitar","prominence":"None|Low|Medium|High"},
-    {"name":"Brass & wind","prominence":"None|Low|Medium|High"},
-    {"name":"Flute & woodwind","prominence":"None|Low|Medium|High"},
-    {"name":"Marimba & mallets","prominence":"None|Low|Medium|High"}
-  ],
-  "subgenres": ["s1","s2","s3"],
-  "energyLevel": "Low|Medium|High|Peak",
-  "bpmRange": "122-128 BPM",
-  "moodTags": ["t1","t2","t3"],
-  "recommendations": [
-    {"artist":"Name","reason":"One sentence"},
-    {"artist":"Name","reason":"One sentence"},
-    {"artist":"Name","reason":"One sentence"}
-  ],
-  "clubScene": "1-2 sentences on venue and energy"
-}`;
-
-        console.log('[analyseVibe] prompt chars:', (system + user).length);
+        incrementDailyCount();
 
         try {
-            const raw  = await callAPI(system, user, 1500, null, 60000, {}, '/api/analyse');
-            const vibe = parseJSON(raw);
-            console.log('[analyseVibe] parsed keys:', Object.keys(vibe || {}), '| vibeName:', vibe?.vibeName);
-            lastVibe   = vibe;
-            lastVibe._lfmData   = lfmData;
+            const controller = new AbortController();
+            const abortTimer = setTimeout(() => controller.abort(), 90000);
+
+            const res = await fetch('/api/analyse', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ songs }),
+                signal:  controller.signal,
+            });
+            clearTimeout(abortTimer);
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data?.error?.message || `API error ${res.status}`);
+
+            const vibe = data.vibe;
+            if (!vibe || typeof vibe !== 'object') throw new Error('Could not parse response — please try again.');
+            console.log('[analyseVibe] vibeName:', vibe.vibeName, '| dominant_subgenres:', vibe.dominant_subgenres);
+
+            lastVibe             = vibe;
+            lastVibe._lfmData    = lfmData;
             lastVibe._lfmSimilar = lfmSimilar;
+            results.innerHTML    = '';
             renderResults(vibe);
             renderDimensions(vibe, lfmData);
             renderPreferences();
         } catch (err) {
-            results.innerHTML = `<div class="error">${esc(err.message)}</div>`;
+            const msg = err.name === 'AbortError' ? 'Taking longer than expected. Please try again.' : err.message;
+            results.innerHTML = `<div class="error">${esc(msg)}</div>`;
         } finally {
+            clearInterval(cycleTimer);
             btn.disabled = false;
             document.getElementById('btnInner').innerHTML = `${waveHtml} Analyse My Vibe`;
         }
@@ -782,47 +775,20 @@ ${trackList}${lfmContext}
     // ── Render results ────────────────────────────────────────────
     function renderResults(v) {
         if (!v || typeof v !== 'object') { console.warn('[renderResults] invalid vibe object:', v); return; }
-        const eCol = { Low: 'var(--muted)', Medium: 'var(--accent)', High: 'var(--text)', Peak: '#F87171' };
-        const col  = eCol[v.energyLevel] || 'var(--text)';
 
-        const moodTags     = (v.moodTags    || []).map(t => `<span class="tag">${esc(t)}</span>`).join('');
-        const subgenreTags = (v.subgenres   || []).map(s => `<span class="tag">${esc(s)}</span>`).join('');
-        const recsHtml     = (v.recommendations || []).map((r, i) => `
-            <div class="rec">
-                <div class="rec-num">${String(i+1).padStart(2,'0')}</div>
-                <div>
-                    <div class="rec-artist">${esc(r.artist)}</div>
-                    <div class="rec-reason">${esc(r.reason)}</div>
-                </div>
-            </div>`).join('');
+        const subgenres    = v.dominant_subgenres || v.subgenres || [];
+        const subgenreTags = subgenres.map(s => `<span class="tag">${esc(s)}</span>`).join('');
 
         document.getElementById('resultsArea').innerHTML = `
             <div>
                 <div class="divider"></div>
-                <div class="vibe-name">${esc(v.vibeName)}</div>
-                <div class="tags">${moodTags}</div>
-                <div class="stats">
-                    <div class="stat">
-                        <div class="stat-lbl">Energy</div>
-                        <div class="stat-val" style="color:${col}">${esc(v.energyLevel)}</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-lbl">BPM Range</div>
-                        <div class="stat-val" style="font-size:13px">${esc(v.bpmRange)}</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-lbl">Subgenres</div>
-                        <div class="stat-val">${(v.subgenres||[]).length}</div>
-                    </div>
-                </div>
+                <div class="vibe-name">${esc(v.vibeName || '')}</div>
                 <div style="margin-bottom:24px">
                     <div class="section-lbl">Subgenre Profile</div>
                     <div class="tags">${subgenreTags}</div>
                 </div>
-                <div class="section-lbl">Artists You'll Love</div>
-                <div class="recs">${recsHtml}</div>
                 <div class="section-lbl">Your Scene</div>
-                <div class="scene-card">${esc(v.clubScene)}</div>
+                <div class="scene-card">${esc(v.clubScene || '')}</div>
             </div>`;
     }
 
@@ -831,7 +797,14 @@ ${trackList}${lfmContext}
         if (!v || typeof v !== 'object') { console.warn('[renderDimensions] invalid vibe object:', v); return; }
         const dims = Array.isArray(v.dimensions) ? v.dimensions : [];
         const dimMap = {};
-        dims.forEach(d => { if (d && d.id) dimMap[d.id] = d; });
+        dims.forEach(d => {
+            if (!d) return;
+            if (d.id) { dimMap[d.id] = d; return; }
+            if (d.name) {
+                const meta = DIMENSION_META.find(m => m.name === d.name);
+                if (meta) dimMap[meta.id] = d;
+            }
+        });
 
         const rowsHtml = DIMENSION_META.map(meta => {
             const d = dimMap[meta.id] || { value: '—', detail: '' };
@@ -845,13 +818,13 @@ ${trackList}${lfmContext}
         }).join('');
 
         let instrHtml = '';
-        const ip = v.instrumentProfile || [];
+        const ip = v.instrument_profile || v.instrumentProfile || [];
         if (ip.length) {
             const instrRows = ip.map(inst => {
                 const p = (inst.prominence || 'None').toLowerCase();
                 return `
                 <div class="instrument-row">
-                    <span class="instrument-name">${esc(inst.name)}</span>
+                    <span class="instrument-name">${esc(inst.instrument || inst.name || '')}</span>
                     <span class="instrument-rating ${p}">${esc(inst.prominence || 'None')}</span>
                 </div>`;
             }).join('');
@@ -1028,7 +1001,6 @@ ${trackList}${lfmContext}
                         discovery_style:  questionAnswers.discovery_style,
                         freeText,
                     },
-                    lfmSimilar: lastVibe._lfmSimilar || [],
                 }),
                 signal: controller.signal,
             });
@@ -1061,8 +1033,15 @@ ${trackList}${lfmContext}
             : `Matched to &nbsp;<strong style="color:var(--accent)">${esc(sliderSummary)}</strong>`;
 
         const cardsHtml = songs.slice(0, 8).map((s, i) => {
-            const dimTagsHtml = (s.dimensionMatches || [])
-                .map(p => `<span class="pref-match-tag">${esc(p)}</span>`).join('');
+            // instruments may be an array (new) or a string (legacy)
+            const instrText = Array.isArray(s.instruments)
+                ? s.instruments.join(', ')
+                : (s.instrumentMatch || s.instruments || '');
+            const sceneText = s.scene || s.sceneEra || '';
+            // links: use provided URLs if available, fall back to search
+            const ytHref  = s.youtube_url  || searchUrl('yt',  s.artist, s.title);
+            const spHref  = s.spotify_url  || searchUrl('sp',  s.artist, s.title);
+            const lfmHref = s.lastfm_url   || searchUrl('lfm', s.artist, s.title);
 
             return `
             <div class="song-card">
@@ -1070,37 +1049,32 @@ ${trackList}${lfmContext}
                 <div class="song-title">${esc(s.title)}</div>
                 <div class="song-artist">${esc(s.artist)}</div>
                 ${s.subgenre ? `<div class="song-subgenre">${esc(s.subgenre)}</div>` : ''}
-                ${s.sceneEra ? `<div class="song-scene">${esc(s.sceneEra)}</div>` : ''}
-                ${s.instrumentMatch ? `
+                ${sceneText ? `<div class="song-scene">${esc(sceneText)}</div>` : ''}
+                ${instrText ? `
                 <div class="song-meta-row">
                     <span class="song-meta-label">Instruments</span>
-                    <span>${esc(s.instrumentMatch)}</span>
+                    <span>${esc(instrText)}</span>
                 </div>` : ''}
                 ${s.weightMatch ? `
                 <div class="song-meta-row" style="margin-bottom:10px">
                     <span class="song-meta-label">Match</span>
                     <span style="font-size:11.5px;color:var(--muted);font-style:italic;line-height:1.55">${esc(s.weightMatch)}</span>
-                </div>` : dimTagsHtml ? `
-                <div class="song-meta-row" style="margin-bottom:12px">
-                    <span class="song-meta-label">Dimension Match</span>
-                    <div class="pref-matches">${dimTagsHtml}</div>
                 </div>` : ''}
                 <div class="song-why">${esc(s.why)}</div>
                 <div class="song-links">
-                    <a class="link-btn link-yt" href="${searchUrl('yt', s.artist, s.title)}" target="_blank" rel="noopener">
+                    <a class="link-btn link-yt" href="${esc(ytHref)}" target="_blank" rel="noopener">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                         YouTube
                     </a>
-                    <a class="link-btn link-sp" href="${searchUrl('sp', s.artist, s.title)}" target="_blank" rel="noopener">
+                    <a class="link-btn link-sp" href="${esc(spHref)}" target="_blank" rel="noopener">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 0 1-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 1 1-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.622.622 0 0 1 .207.857zm1.223-2.722a.779.779 0 0 1-1.071.257c-2.687-1.652-6.785-2.131-9.965-1.166a.779.779 0 0 1-.435-1.493c3.632-1.057 8.147-.546 11.214 1.331a.779.779 0 0 1 .257 1.071zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.935.935 0 1 1-.543-1.79c3.532-1.072 9.404-.865 13.115 1.337a.935.935 0 0 1-.955 1.61z"/></svg>
                         Spotify
                     </a>
-                    <a class="link-btn link-lfm" href="${searchUrl('lfm', s.artist, s.title)}" target="_blank" rel="noopener">
+                    <a class="link-btn link-lfm" href="${esc(lfmHref)}" target="_blank" rel="noopener">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M10.96 2C5.991 2 2 5.99 2 10.96c0 4.97 3.99 8.96 8.96 8.96 4.97 0 8.96-3.99 8.96-8.96C19.92 5.99 15.93 2 10.96 2zm3.44 12.71l-1.15-2.77-1.85 2.1-2.01-4.21-.85 2.88H6.83l.98-3.34 1.14.44 1.29-4.36 1.94 4.05 1.86-2.1 1.65 3.97 1.14-1.81h1.34l-2.72 5.15z"/></svg>
                         Last.fm
                     </a>
                 </div>
-                <div class="song-verify">Verify on streaming platforms before listening.</div>
             </div>`;
         }).join('');
 
