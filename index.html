@@ -345,11 +345,13 @@
         .tl-step.active  .tl-dot  { border: 1.5px solid rgba(201,168,76,0.4); border-top-color: var(--accent); animation: spin 0.75s linear infinite; }
         .tl-step.done    .tl-dot  { background: var(--accent); }
         .tl-step.error   .tl-dot  { background: rgba(239,68,68,0.6); }
+        .tl-step.warn    .tl-dot  { background: rgba(201,168,76,0.4); }
         .tl-body { flex: 1; min-width: 0; }
         .tl-label { font-size: 12px; line-height: 1.45; color: rgba(255,255,255,0.28); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .tl-step.active .tl-label { color: rgba(255,255,255,0.85); }
         .tl-step.done   .tl-label { color: rgba(255,255,255,0.6); }
         .tl-step.error  .tl-label { color: rgba(239,68,68,0.7); }
+        .tl-step.warn   .tl-label { color: rgba(201,168,76,0.65); }
         .tl-time { font-size: 10px; color: var(--accent); opacity: 0.65; margin-top: 1px; font-variant-numeric: tabular-nums; }
 
         /* ── Last.fm note ── */
@@ -748,19 +750,29 @@
         const dotEl   = el.querySelector('.tl-dot');
         const labelEl = el.querySelector('.tl-label');
         const timeEl  = el.querySelector('.tl-time');
-        if (dotEl)   dotEl.innerHTML   = status === 'done' ? checkSvg : '';
+        if (dotEl)   dotEl.innerHTML   = status === 'done' ? checkSvg : (status === 'warn' ? '–' : '');
         if (labelEl) labelEl.textContent = label;
         if (timeEl && elapsed !== undefined && elapsed > 0) {
             timeEl.textContent = `${(elapsed / 1000).toFixed(1)}s`;
         }
     }
 
-    async function readSSE(url, body, onEvent) {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        });
+    async function readSSE(url, body, onEvent, _retries = 0) {
+        let res;
+        try {
+            res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+        } catch (networkErr) {
+            if (_retries < 2) {
+                console.warn('[readSSE] network error, retrying in 2s…', networkErr.message);
+                await new Promise(r => setTimeout(r, 2000));
+                return readSSE(url, body, onEvent, _retries + 1);
+            }
+            throw new Error('Connection lost. Please try again.');
+        }
         if (!res.ok) {
             const data = await res.json().catch(() => ({}));
             throw new Error(data?.error?.message || `API error ${res.status}`);
@@ -779,11 +791,20 @@
                 }
             }
         };
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) { buffer += '\n\n'; flush(); break; }
-            buffer += decoder.decode(value, { stream: true });
-            flush();
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) { buffer += '\n\n'; flush(); break; }
+                buffer += decoder.decode(value, { stream: true });
+                flush();
+            }
+        } catch (streamErr) {
+            if (_retries < 2) {
+                console.warn('[readSSE] stream error, retrying in 2s…', streamErr.message);
+                await new Promise(r => setTimeout(r, 2000));
+                return readSSE(url, body, onEvent, _retries + 1);
+            }
+            throw new Error('Connection lost. Please try again.');
         }
     }
 

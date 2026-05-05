@@ -1,0 +1,100 @@
+Read CLAUDE.md for context. Fix the SSE timeout issue permanently with these exact changes to server.js. Do not change any agent logic, prompts, or pipeline order. Only add keepalive and resilience.
+
+FIX 1 — SSE KEEPALIVE
+In every route that uses SSE (/api/analyse and /api/recommend), start a keepalive interval immediately after setting SSE headers:
+
+const keepalive = setInterval(() => {
+  try { res.write(': keepalive\n\n'); } catch(e) { clearInterval(keepalive); }
+}, 8000);
+
+Clear this interval at the very end of the route (success or error):
+clearInterval(keepalive);
+
+This sends a comment ping every 8 seconds. SSE comment lines (starting with :) are invisible to the browser but prevent the connection going idle. Railway drops idle connections after ~30 seconds - 8 second pings prevent this permanently.
+
+FIX 2 — PER-AGENT TIMEOUT WRAPPER
+Wrap every callAgent() call in a timeout promise:
+
+async function callAgentWithTimeout(systemPrompt, userMessage, maxTokens, useWebSearch, timeoutMs = 40000) {
+  return Promise.race([
+    callAgent(systemPrompt, userMessage, maxTokens, useWebSearch),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('AGENT_TIMEOUT')), timeoutMs))
+  ]);
+}
+
+For web search agents (Beatport, Traxsource, RA scouts) set timeoutMs to 55000 (55 seconds).
+For all other agents set timeoutMs to 25000 (25 seconds).
+
+FIX 3 — GRACEFUL AGENT FAILURE (never kill the pipeline)
+If any agent times out or errors, catch it and continue:
+
+let beatportResults = [];
+try {
+  beatportResults = await callAgentWithTimeout(..., 55000);
+  sendSSE(res, { step: 'beatport', status: 'done', message: `Beatport scouted (${beatportResults.length} tracks)` });
+} catch (err) {
+  sendSSE(res, { step: 'beatport', status: 'warn', message: 'Beatport scout slow - continuing with other sources' });
+  beatportResults = []; // empty array, pipeline continues
+}
+
+Apply same pattern to Traxsource scout and RA scout.
+If ALL three scouts fail, still run the recommendation engine with CSV niche artists only.
+Never let res.end() be called inside a catch block that stops the pipeline.
+
+FIX 4 — CLEAN SSE HELPER FUNCTION
+Replace any inline res.write calls with a helper:
+
+function sendSSE(res, data) {
+  try {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  } catch(e) {
+    // connection already closed, ignore
+  }
+}
+
+FIX 5 — PROPER SSE CLEANUP ON CLIENT DISCONNECT
+Add this at the start of each SSE route:
+
+req.on('close', () => {
+  clearInterval(keepalive);
+});
+
+This prevents memory leaks if user closes browser mid-stream.
+
+FIX 6 — INDEX.HTML SSE RECONNECT
+In index.html, wrap the EventSource in a reconnect handler:
+
+let retryCount = 0;
+function startSSE(url, onMessage, onDone) {
+  const es = new EventSource(url);
+  es.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    onMessage(data);
+    if (data.done) { es.close(); onDone(data); }
+  };
+  es.onerror = () => {
+    es.close();
+    if (retryCount < 2) {
+      retryCount++;
+      setTimeout(() => startSSE(url, onMessage, onDone), 2000);
+    } else {
+      onDone({ error: 'Connection lost. Please try again.' });
+    }
+  };
+}
+
+NOTHING ELSE CHANGES:
+- All 13 agents stay exactly as they are
+- All prompts stay exactly as they are  
+- All delays stay exactly as they are
+- All token counts stay exactly as they are
+- Pipeline order stays exactly as it is
+
+After changes, verify by checking:
+1. Does every SSE route have a keepalive interval that starts immediately?
+2. Does every agent call use callAgentWithTimeout?
+3. Does every agent have a try/catch that continues the pipeline on failure?
+4. Is clearInterval(keepalive) called in both success and error paths?
+5. Is req.on('close') handled?
+
+If all 5 are true, commit and push. Update CLAUDE.md session log.

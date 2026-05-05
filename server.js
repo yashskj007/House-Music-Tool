@@ -133,6 +133,17 @@ function parseAgentJSON(text) {
 
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
+function sendSSE(res, data) {
+    try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch (e) { /* connection closed */ }
+}
+
+async function callAgentWithTimeout(systemPrompt, userMessage, maxTokens, useWebSearch, timeoutMs = 25000) {
+    return Promise.race([
+        callAgent(systemPrompt, userMessage, maxTokens, useWebSearch),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('AGENT_TIMEOUT')), timeoutMs)),
+    ]);
+}
+
 async function callAgent(systemPrompt, userMessage, maxTokens, useWebSearch = false, _retried = false) {
     const headers = {
         'Content-Type':      'application/json',
@@ -213,7 +224,8 @@ app.post('/api/analyse', async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
 
-    const sse = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} };
+    const keepalive = setInterval(() => { try { res.write(': keepalive\n\n'); } catch (e) { clearInterval(keepalive); } }, 8000);
+    req.on('close', () => clearInterval(keepalive));
 
     const trackSystem = `House music expert. Analyse this track. Return ONLY JSON: {bpm_range, subgenre, groove, energy, vocals, instruments, production_era, mood, geographic_origin, artist, title}. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {`;
 
@@ -225,39 +237,41 @@ app.post('/api/analyse', async (req, res) => {
             const song = songs[i];
             const userMsg = `${song.artist} - ${song.title}${song.lfmTags?.length ? ` [tags: ${song.lfmTags.slice(0, 3).join(', ')}]` : ''}`;
 
-            sse({ step: `track-${i}`, status: 'active', label: `Decoding: ${song.artist} — ${song.title}` });
+            sendSSE(res, { step: `track-${i}`, status: 'active', label: `Decoding: ${song.artist} — ${song.title}` });
             const t0 = Date.now();
             console.log(`[analyse] Agent ${i + 1} (Track Decoder): ${song.artist} - ${song.title}`);
 
-            const analysis = await callAgent(trackSystem, userMsg, 250, false);
+            const analysis = await callAgentWithTimeout(trackSystem, userMsg, 250, false, 25000);
             const elapsed = Date.now() - t0;
             console.log(`[analyse] Agent ${i + 1} done in ${elapsed}ms`);
 
             trackAnalyses.push(analysis);
-            sse({ step: `track-${i}`, status: 'done', label: `Decoded: ${song.artist} — ${song.title}`, elapsed });
+            sendSSE(res, { step: `track-${i}`, status: 'done', label: `Decoded: ${song.artist} — ${song.title}`, elapsed });
 
             if (i < songs.length - 1) await delay(1500);
         }
 
         // Agent 6: Vibe Synthesiser
         await delay(2000);
-        sse({ step: 'vibe', status: 'active', label: 'Synthesising your vibe DNA...' });
+        sendSSE(res, { step: 'vibe', status: 'active', label: 'Synthesising your vibe DNA...' });
         const t6 = Date.now();
         console.log('[analyse] Agent 6 (Vibe Synthesiser) starting');
 
         const vibeSystem = `Music taste profiler. Synthesise these House track analyses. Return ONLY JSON: {vibeName, vibeDNA, dimensions (array of exactly 10 objects each with name, value, detail), dominant_subgenres (array of 3 strings), instrument_profile (array of objects with instrument and prominence), clubScene}. Dimension names must be: Tempo DNA, Harmonic Palette, Textural Layers, Emotional Arc, Vocal Character, Production Era, Geographic DNA, Scene Position, Listener Profile, Dancefloor Function. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {`;
 
-        const vibeProfile = await callAgent(vibeSystem, JSON.stringify(trackAnalyses), 1000, false);
+        const vibeProfile = await callAgentWithTimeout(vibeSystem, JSON.stringify(trackAnalyses), 1000, false, 25000);
         const elapsed6 = Date.now() - t6;
         console.log(`[analyse] Agent 6 done in ${elapsed6}ms | vibeName: ${vibeProfile.vibeName}`);
 
-        sse({ step: 'vibe', status: 'done', label: 'Vibe DNA synthesised', elapsed: elapsed6 });
-        sse({ type: 'final', result: vibeProfile });
+        sendSSE(res, { step: 'vibe', status: 'done', label: 'Vibe DNA synthesised', elapsed: elapsed6 });
+        sendSSE(res, { type: 'final', result: vibeProfile });
+        clearInterval(keepalive);
         res.end();
 
     } catch (err) {
         console.error('[analyse] error:', err.message, '\n', err.stack);
-        sse({ type: 'error', message: err.message });
+        sendSSE(res, { type: 'error', message: err.message });
+        clearInterval(keepalive);
         res.end();
     }
 });
@@ -278,88 +292,107 @@ app.post('/api/recommend', async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
 
-    const sse = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {} };
+    const keepalive = setInterval(() => { try { res.write(': keepalive\n\n'); } catch (e) { clearInterval(keepalive); } }, 8000);
+    req.on('close', () => clearInterval(keepalive));
 
     try {
         // Agent 7: Preference Interpreter
-        sse({ step: 'prefs', status: 'active', label: 'Mapping your preferences...' });
+        sendSSE(res, { step: 'prefs', status: 'active', label: 'Mapping your preferences...' });
         const t7 = Date.now();
         const a7System = `Convert House music preference scores (1-5) and free text into a sonic profile. Return ONLY JSON: {groove_want, texture_want, harmony_want, structure_want, discovery_want, keywords (array of strings), moment}. Return ONLY valid JSON. No markdown fences. No explanation. Start response with {`;
-        const prefProfile = await callAgent(a7System, JSON.stringify({
+        const prefProfile = await callAgentWithTimeout(a7System, JSON.stringify({
             beat_feel:        preferences.beat_feel,
             sound_texture:    preferences.sound_texture,
             emotion_hypnosis: preferences.emotion_hypnosis,
             track_journey:    preferences.track_journey,
             discovery_style:  preferences.discovery_style,
             freeText:         preferences.freeText || '',
-        }), 250, false);
-        sse({ step: 'prefs', status: 'done', label: 'Preferences mapped', elapsed: Date.now() - t7 });
+        }), 250, false, 25000);
+        sendSSE(res, { step: 'prefs', status: 'done', label: 'Preferences mapped', elapsed: Date.now() - t7 });
 
-        // Agent 8: Beatport Scout
+        // Agent 8: Beatport Scout — graceful failure, pipeline continues
         await delay(2000);
-        sse({ step: 'beatport', status: 'active', label: 'Scouting Beatport...' });
+        sendSSE(res, { step: 'beatport', status: 'active', label: 'Scouting Beatport...' });
         const t8 = Date.now();
         const a8System = `Search Beatport for 5 real released House tracks matching this subgenre. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
-        const beatportRaw = await callAgent(a8System, `Dominant subgenre: ${dominantSubgenre}\nVibe: ${vibe.vibeDNA || ''}`, 600, true);
-        const beatportCandidates = unwrapArray(beatportRaw);
-        sse({ step: 'beatport', status: 'done', label: `Beatport scouted (${beatportCandidates.length} tracks)`, elapsed: Date.now() - t8 });
+        let beatportCandidates = [];
+        try {
+            beatportCandidates = unwrapArray(await callAgentWithTimeout(a8System, `Dominant subgenre: ${dominantSubgenre}\nVibe: ${vibe.vibeDNA || ''}`, 600, true, 55000));
+            sendSSE(res, { step: 'beatport', status: 'done', label: `Beatport scouted (${beatportCandidates.length} tracks)`, elapsed: Date.now() - t8 });
+        } catch (err) {
+            console.warn('[recommend] Agent 8 (Beatport) failed:', err.message);
+            sendSSE(res, { step: 'beatport', status: 'warn', label: 'Beatport scout slow — continuing with other sources', elapsed: Date.now() - t8 });
+        }
 
-        // Agent 9: Traxsource Scout
+        // Agent 9: Traxsource Scout — graceful failure
         await delay(5000);
-        sse({ step: 'traxsource', status: 'active', label: 'Scouting Traxsource...' });
+        sendSSE(res, { step: 'traxsource', status: 'active', label: 'Scouting Traxsource...' });
         const t9 = Date.now();
         const a9System = `Search Traxsource for 5 real released House tracks matching this subgenre. Include underground artists. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
-        const traxRaw = await callAgent(a9System, `Dominant subgenre: ${dominantSubgenre}\nVibe DNA: ${vibe.vibeDNA || ''}`, 600, true);
-        const traxsourceCandidates = unwrapArray(traxRaw);
-        sse({ step: 'traxsource', status: 'done', label: `Traxsource scouted (${traxsourceCandidates.length} tracks)`, elapsed: Date.now() - t9 });
+        let traxsourceCandidates = [];
+        try {
+            traxsourceCandidates = unwrapArray(await callAgentWithTimeout(a9System, `Dominant subgenre: ${dominantSubgenre}\nVibe DNA: ${vibe.vibeDNA || ''}`, 600, true, 55000));
+            sendSSE(res, { step: 'traxsource', status: 'done', label: `Traxsource scouted (${traxsourceCandidates.length} tracks)`, elapsed: Date.now() - t9 });
+        } catch (err) {
+            console.warn('[recommend] Agent 9 (Traxsource) failed:', err.message);
+            sendSSE(res, { step: 'traxsource', status: 'warn', label: 'Traxsource scout slow — continuing with other sources', elapsed: Date.now() - t9 });
+        }
 
-        // Agent 10: Resident Advisor Scout
+        // Agent 10: Resident Advisor Scout — graceful failure
         await delay(5000);
-        sse({ step: 'ra', status: 'active', label: 'Scouting Resident Advisor...' });
+        sendSSE(res, { step: 'ra', status: 'active', label: 'Scouting Resident Advisor...' });
         const t10 = Date.now();
         const a10System = `Search Resident Advisor for 5 real released House tracks matching this taste profile. Include emerging artists. Only tracks you are highly confident exist. Return ONLY JSON array: [{artist, title, subgenre, release_year, confidence}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
-        const raRaw = await callAgent(a10System, `Vibe DNA: ${vibe.vibeDNA || ''}\nPreference: ${JSON.stringify(prefProfile)}`, 600, true);
-        const raCandidates = unwrapArray(raRaw);
-        sse({ step: 'ra', status: 'done', label: `Resident Advisor scouted (${raCandidates.length} tracks)`, elapsed: Date.now() - t10 });
+        let raCandidates = [];
+        try {
+            raCandidates = unwrapArray(await callAgentWithTimeout(a10System, `Vibe DNA: ${vibe.vibeDNA || ''}\nPreference: ${JSON.stringify(prefProfile)}`, 600, true, 55000));
+            sendSSE(res, { step: 'ra', status: 'done', label: `Resident Advisor scouted (${raCandidates.length} tracks)`, elapsed: Date.now() - t10 });
+        } catch (err) {
+            console.warn('[recommend] Agent 10 (RA) failed:', err.message);
+            sendSSE(res, { step: 'ra', status: 'warn', label: 'RA scout slow — continuing with other sources', elapsed: Date.now() - t10 });
+        }
 
         // Agent 11: CSV Niche Matcher — pure JS, zero tokens
-        sse({ step: 'niche', status: 'active', label: 'Checking niche artist database...' });
+        sendSSE(res, { step: 'niche', status: 'active', label: 'Checking niche artist database...' });
         const nicheArtists = getNicheArtists(subgenres);
-        console.log('[recommend] niche artists:', nicheArtists.length, '| candidates:', beatportCandidates.length + traxsourceCandidates.length + raCandidates.length);
-        sse({ step: 'niche', status: 'done', label: `${nicheArtists.length} niche artists matched`, elapsed: 0 });
+        const totalCandidates = beatportCandidates.length + traxsourceCandidates.length + raCandidates.length;
+        console.log('[recommend] niche artists:', nicheArtists.length, '| web candidates:', totalCandidates);
+        sendSSE(res, { step: 'niche', status: 'done', label: `${nicheArtists.length} niche artists matched`, elapsed: 0 });
 
         const allCandidates = [...beatportCandidates, ...traxsourceCandidates, ...raCandidates];
 
         // Agent 12: Pre-Scorer
         await delay(2000);
-        sse({ step: 'score', status: 'active', label: 'Scoring candidates...' });
+        sendSSE(res, { step: 'score', status: 'active', label: 'Scoring candidates...' });
         const t12 = Date.now();
         const weightsLine = hasFreeText
             ? '40% vibe match, 30% preference match, 30% free text match'
             : '57% vibe match, 43% preference match';
         const a12System = `Score these candidate tracks against this vibe DNA and preference profile. Weights: ${weightsLine}. Also check if any niche artists provided would fit better — if so add them. Return ONLY top 10 scored candidates as JSON array: [{artist, title, subgenre, score_out_of_10, why_it_fits}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
         const a12User = `VIBE DNA: ${JSON.stringify(vibe)}\nPREFERENCE PROFILE: ${JSON.stringify(prefProfile)}${hasFreeText ? `\nFREE TEXT: "${preferences.freeText}"` : ''}\nCANDIDATES (${allCandidates.length}): ${JSON.stringify(allCandidates)}\nNICHE ARTISTS: ${nicheArtists.join(', ')}`;
-        const scoredRaw = await callAgent(a12System, a12User, 800, false);
+        const scoredRaw = await callAgentWithTimeout(a12System, a12User, 800, false, 25000);
         const scoredCandidates = unwrapArray(scoredRaw);
-        sse({ step: 'score', status: 'done', label: `${scoredCandidates.length} candidates scored`, elapsed: Date.now() - t12 });
+        sendSSE(res, { step: 'score', status: 'done', label: `${scoredCandidates.length} candidates scored`, elapsed: Date.now() - t12 });
 
         // Agent 13: Final Recommendation Builder
         await delay(2000);
-        sse({ step: 'build', status: 'active', label: 'Building your playlist...' });
+        sendSSE(res, { step: 'build', status: 'active', label: 'Building your playlist...' });
         const t13 = Date.now();
         const a13System = `You are the final recommendation engine. From these pre-scored candidates select exactly 8 best matches. For each write a compelling card. Return ONLY JSON array of exactly 8 objects: [{title, artist, subgenre, scene (one line), instruments (array of 3), why (2 sentences referencing specific vibe dimensions), youtube_url (https://music.youtube.com/search?q=Artist+Title with spaces as +), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (string: which weights drove this — vibe/preference/freetext)}]. Return ONLY valid JSON. No markdown fences. No explanation. Start response with [`;
         const a13User = `SCORED CANDIDATES: ${JSON.stringify(scoredCandidates)}\nVIBE DNA: ${JSON.stringify(vibe)}\nPREFERENCE PROFILE: ${JSON.stringify(prefProfile)}`;
-        const recsRaw = await callAgent(a13System, a13User, 1800, false);
+        const recsRaw = await callAgentWithTimeout(a13System, a13User, 1800, false, 25000);
         const recommendations = unwrapArray(recsRaw);
         const elapsed13 = Date.now() - t13;
         console.log(`[recommend] Agent 13 done in ${elapsed13}ms | tracks: ${recommendations.length}`);
-        sse({ step: 'build', status: 'done', label: 'Playlist built', elapsed: elapsed13 });
-        sse({ type: 'final', result: recommendations });
+        sendSSE(res, { step: 'build', status: 'done', label: 'Playlist built', elapsed: elapsed13 });
+        sendSSE(res, { type: 'final', result: recommendations });
+        clearInterval(keepalive);
         res.end();
 
     } catch (err) {
         console.error('[recommend] error:', err.message, '\n', err.stack);
-        sse({ type: 'error', message: err.message });
+        sendSSE(res, { type: 'error', message: err.message });
+        clearInterval(keepalive);
         res.end();
     }
 });
