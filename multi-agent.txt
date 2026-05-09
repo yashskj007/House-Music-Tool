@@ -1,0 +1,48 @@
+Read CLAUDE.md for context. Redesign the recommendation engine as a 4-agent pipeline in server.js. Each agent is a separate Anthropic API call with a small focused prompt. Same quality output, just split across calls to stay under token limits.
+
+AGENT 1 — SONG ANALYSER
+Route: called first when user clicks "Analyse My Vibe"
+Input: 5 song titles + Last.fm data (tags, listener counts, similar artists)
+System prompt (keep under 500 tokens): "You are a House music expert. Analyse these 5 tracks and return a JSON object with exactly these fields: vibeName (string), vibeDNA (string, 2 sentences), dimensions (array of 10 objects each with: name, value, detail), instrumentation (array of objects with: instrument, prominence), subgenres (array of detected subgenre strings), bpm_range (string), energy (string), clubScene (string)"
+Max tokens: 1500
+No artist list. No web search. Pure analysis only.
+
+AGENT 2 — PREFERENCE INTERPRETER  
+Route: called immediately after Agent 1 completes
+Input: the 5 question scores (beat_feel, sound_texture, emotion_hypnosis, track_journey, discovery_style) + free text description
+System prompt (keep under 200 tokens): "You are a music taste interpreter. Convert these preference scores and description into a sonic preference profile. Return JSON with: groove_preference, texture_preference, harmony_preference, structure_preference, discovery_preference, free_text_keywords (array), overall_vibe_direction (string)"
+Max tokens: 500
+Tiny call. Very fast.
+
+AGENT 3 — ARTIST SCOUT
+Route: called after Agent 1 + 2 complete
+Input: detected subgenres from Agent 1 + preference profile from Agent 2
+System prompt (keep under 300 tokens): "You are a House music scout. Given these subgenres and preferences, find 15-20 candidate artists and tracks that match. Use web search to find current releases. Include underground and emerging artists - do not default to famous names only. Return JSON array of candidates: [{artist, track, subgenre, why_it_fits}]"
+Tools: web search enabled
+Max tokens: 2000
+Server-side: inject only the relevant 80 artists from CSV matching the detected subgenre bucket (not full list)
+
+AGENT 4 — RECOMMENDATION SYNTHESISER
+Route: called after Agent 3 completes
+Input: Agent 1 vibe DNA + Agent 2 preference profile + Agent 3 candidate list
+System prompt (keep under 400 tokens): "You are a music recommendation engine. Score each candidate track against these weights: 40% sonic match to vibe DNA, 30% match to preference profile, 30% match to free text description (if provided, else redistribute 57/43). Select the 6-8 highest scoring tracks. Return JSON array: [{title, artist, subgenre, scene, instruments, why (2 sentences referencing which dimensions matched), youtube_url, spotify_url, weightMatch (which weights drove this)}]"
+Max tokens: 2000
+No web search needed here - just scoring and selecting.
+
+ORCHESTRATION in server.js:
+Create a new route POST /api/recommend that runs all 4 agents in sequence:
+1. Run Agent 1 (analyseVibe) 
+2. Run Agent 2 (interpretPreferences) in parallel with Agent 1 if possible
+3. Run Agent 3 (scoutArtists) with results from 1+2
+4. Run Agent 4 (synthesiseRecommendations) with results from 1+2+3
+5. Return combined result to browser: {vibe: agent1result, preferences: agent2result, recommendations: agent4result}
+
+Update index.html to:
+- Call /api/analyse for the analysis phase (Agent 1 only)
+- Call /api/recommend for the full recommendation pipeline (Agents 2+3+4)
+- Handle the combined response format correctly
+- Show a multi-step loading indicator: "Analysing your tracks..." → "Reading your preferences..." → "Scouting artists..." → "Building your playlist..."
+
+Each agent call stays under 8,000 tokens total. Rate limit never hit. Full quality maintained.
+
+Commit and push when done.

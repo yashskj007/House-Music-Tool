@@ -1,0 +1,15 @@
+Read CLAUDE.md for context. Fix the app on Railway with these exact changes to server.js and index.html:
+
+FIX 1 - Add prompt caching to server.js
+In the analyseVibe and findSongs routes, add "cache_control": {"type": "ephemeral"} to the system prompt block and to the artist list block. This tells Anthropic to cache repeated content and not count it toward rate limits on subsequent requests. Add "anthropic-beta": "prompt-caching-2024-07-31" to the headers.
+
+FIX 2 - Fix the parse error
+The analyseVibe response is returning "Could not parse response". Add console.log in server.js to log the raw response from Anthropic before sending it to the browser. Then in index.html, fix the callAPI function to handle the response from Railway server correctly - the server returns {content: text} as JSON, so parse it as response.json() then extract .content field.
+
+FIX 3 - Simplify the analyseVibe prompt
+The analyseVibe system prompt is too long. Reduce it to under 2000 tokens total. Keep the 10 dimensions but make instructions concise. Remove all verbose explanations - just tell Claude what JSON to return.
+
+FIX 4 - Remove artist list from analyseVibe completely  
+The artist list is only needed in findSongs, not analyseVibe. Remove it from analyseVibe prompt entirely. This alone will cut token usage by 60%.
+
+Commit and push when done.

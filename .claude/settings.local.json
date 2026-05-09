@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(python3 *)",
+      "Bash(git push *)",
+      "Bash(copy *)",
+      "PowerShell(Copy-Item *)",
+      "Bash(git commit *)",
+      "Bash(python *)",
+      "Skill(claude-api)",
+      "Bash(node *)",
+      "Bash(git tag *)"
+    ]
+  }
+}

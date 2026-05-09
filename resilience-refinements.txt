@@ -1,0 +1,185 @@
+Read CLAUDE.md for context. Add these resilience layers on top of the existing Last.fm + CSV architecture. The goal: pipeline ALWAYS produces output, never blocks on any single dependency.
+
+REFINEMENT 1 — DETERMINISTIC SCORER (CRITICAL)
+Add a new function to server.js called scoreCandidatesDeterministic() that does pure JavaScript scoring without any Anthropic call:
+
+function scoreCandidatesDeterministic(candidates, vibeDNA, preferences, freeTextKeywords) {
+  return candidates.map(c => {
+    let score = 0;
+    
+    // 40% weight: vibe DNA match
+    if (vibeDNA.dominant_subgenres.includes(c.subgenre)) score += 40;
+    if (vibeDNA.dimensions.find(d => d.detail.toLowerCase().includes(c.subgenre.toLowerCase()))) score += 10;
+    
+    // 30% weight: preference match
+    if (preferences.groove_want && c.tags?.some(t => t.includes(preferences.groove_want))) score += 10;
+    if (preferences.texture_want && c.tags?.some(t => t.includes(preferences.texture_want))) score += 10;
+    if (preferences.harmony_want && c.tags?.some(t => t.includes(preferences.harmony_want))) score += 10;
+    
+    // 30% weight: free text keyword match
+    if (freeTextKeywords?.length) {
+      freeTextKeywords.forEach(k => {
+        if (c.title?.toLowerCase().includes(k.toLowerCase())) score += 5;
+        if (c.tags?.some(t => t.toLowerCase().includes(k.toLowerCase()))) score += 5;
+      });
+    }
+    
+    // Source diversity bonus - prevent Last.fm popularity from swamping
+    if (c.source === 'csv_niche') score += 8;
+    if (c.source === 'lastfm_similar') score += 5;
+    
+    return { ...c, score };
+  })
+  .sort((a, b) => b.score - a.score)
+  .slice(0, 8);
+}
+
+This function ALWAYS returns 8 results from candidates. Zero external dependencies. Zero failure modes.
+
+REFINEMENT 2 — LLM AS ENRICHMENT, NOT SOLE PATH
+Restructure the recommendation flow:
+
+Step 1: Run deterministic scorer → get top 8 candidates with scores (always succeeds)
+Step 2: Try to run Anthropic enrichment call with 20 second timeout
+  - Sends top 8 to Anthropic asking for: better "why" text, instrument profile, scene context
+  - Returns enriched JSON
+Step 3: If Anthropic succeeds → use enriched output
+Step 4: If Anthropic fails OR times out → use deterministic results with template-generated "why" text
+
+Template "why" text generator:
+function generateTemplateWhy(track, vibeDNA) {
+  return `Matches your ${vibeDNA.dominant_subgenres[0]} preference with ${track.subgenre} energy. Strong fit on ${vibeDNA.dimensions[0].name}.`;
+}
+
+This means: pipeline ALWAYS produces 8 recommendations, even if Anthropic is completely down.
+
+REFINEMENT 3 — QUORUM SUCCESS ON DISCOVERY
+Don't require all Last.fm calls to succeed. Define minimum thresholds:
+
+const MIN_CANDIDATES = 15;
+const TARGET_CANDIDATES = 50;
+
+After running all discovery sources in parallel:
+- If total candidates >= TARGET: proceed normally
+- If total candidates >= MIN: proceed with degraded mode flag
+- If total candidates < MIN: broaden search (use parent subgenre tags, increase limits)
+- If still < MIN: use CSV-only with full bucket (top 30 niche artists)
+
+The pipeline NEVER waits for all sources. As soon as MIN_CANDIDATES is reached or 3 seconds passes (whichever first), proceed.
+
+REFINEMENT 4 — PER-STEP HARD DEADLINES
+Add a budget tracker that enforces total pipeline time:
+
+const PIPELINE_BUDGET_MS = 45000; // 45 second total budget
+const STEP_DEADLINES = {
+  trackDecode: 4000,
+  vibeSynth: 8000,
+  preference: 3000,
+  lastfmTags: 3000,
+  lastfmSimilar: 3000,
+  csvMatch: 100,
+  deterministicScore: 100,
+  llmEnrich: 20000
+};
+
+Each step must complete within its deadline or move on with whatever data exists. Track elapsed time globally - if total exceeds 40 seconds, skip LLM enrichment entirely.
+
+REFINEMENT 5 — IN-MEMORY CACHING
+Add LRU cache for Last.fm responses to reduce repeated API calls:
+
+const cache = new Map();
+const CACHE_TTL = 3600000; // 1 hour
+
+async function cachedFetch(key, fetchFn) {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.time < CACHE_TTL) return cached.data;
+  const data = await fetchFn();
+  cache.set(key, { data, time: Date.now() });
+  return data;
+}
+
+Use for: tag.gettoptracks (key: tag name), artist.getsimilar (key: artist name), track.getInfo (key: artist+title).
+
+Same user analysing similar tracks twice? Instant second time.
+
+REFINEMENT 6 — SOURCE DIVERSITY CAPS
+After merging all candidates, enforce diversity:
+
+function diversifyCandidates(candidates) {
+  const bySource = { lastfm_tags: [], lastfm_similar: [], csv_niche: [] };
+  candidates.forEach(c => bySource[c.source]?.push(c));
+  
+  // Cap each source contribution to top 8 final
+  return [
+    ...bySource.lastfm_tags.slice(0, 4),
+    ...bySource.lastfm_similar.slice(0, 4),
+    ...bySource.csv_niche.slice(0, 4)
+  ];
+}
+
+Prevents Last.fm popularity from swamping niche CSV results.
+
+REFINEMENT 7 — OBSERVABILITY LOGGING
+Add structured logging at every step:
+
+function logStep(step, data) {
+  console.log(JSON.stringify({
+    step,
+    timestamp: Date.now(),
+    duration_ms: data.duration,
+    success: data.success,
+    candidates_count: data.candidates,
+    fallback_used: data.fallback || false,
+    error: data.error || null
+  }));
+}
+
+Log every: API call success/failure, candidate counts at each stage, whether deterministic or LLM path was used, total pipeline duration.
+
+REFINEMENT 8 — CONFIDENCE SCORING
+Add a confidence field to the final response:
+
+const confidence = {
+  level: 'high' | 'medium' | 'low',
+  reasons: []
+};
+
+If candidate count < 30: confidence.level = 'medium', reasons.push('limited_candidates');
+If LLM enrichment failed: confidence.level = 'medium', reasons.push('using_template_rationale');
+If only CSV worked: confidence.level = 'low', reasons.push('discovery_apis_unavailable');
+
+Don't show confidence to user. Log it for debugging and product improvement.
+
+REFINEMENT 9 — RETRY WITH JITTER
+For transient API failures, retry with exponential backoff + jitter:
+
+async function retryWithJitter(fn, maxAttempts = 2) {
+  for (let i = 0; i < maxAttempts; i++) {
+    try { return await fn(); }
+    catch (err) {
+      if (i === maxAttempts - 1) throw err;
+      const delay = (Math.pow(2, i) * 500) + Math.random() * 500;
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+}
+
+Apply to all Last.fm calls. Anthropic call already has its own retry.
+
+REFINEMENT 10 — PARTIAL RESULT CHECKPOINTS
+After each major stage, store partial results in a job state object:
+
+const jobState = {
+  vibe: null,
+  preferences: null,
+  candidates: [],
+  scoredCandidates: [],
+  finalRecommendations: []
+};
+
+Update after each stage. If anything fails downstream, can return whatever partial state exists with appropriate confidence flag.
+
+ARCHITECTURE PRINCIPLE:
+The pipeline is now structured so the product NEVER fails to produce output. Every stage has a fallback. Every external dependency has a deadline. Every failure has a degraded-mode path.
+
+Update CLAUDE.md with the new architecture. Commit and push.

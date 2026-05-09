@@ -1,0 +1,173 @@
+Read CLAUDE.md for context. Add MusicBrainz and Discogs as additional discovery sources to broaden recommendation coverage beyond Last.fm + CSV. Keep all existing resilience layers (deterministic scorer, quorum success, hard deadlines, caching, degraded mode). Do not introduce open web search.
+
+NEW ENVIRONMENT VARIABLES (add to Railway dashboard):
+- DISCOGS_TOKEN — user generates a free personal access token at https://www.discogs.com/settings/developers and adds it to Railway environment variables. If not set, Discogs is skipped silently.
+- USER_AGENT_CONTACT — set to "yash.skj@gmail.com" — used as contact info in User-Agent strings for MusicBrainz and Discogs
+
+NEW DISCOVERY FUNCTIONS in server.js:
+
+1. MUSICBRAINZ DISCOVERY
+Add function searchMusicBrainz(subgenres, vibeKeywords) that does the following:
+- For each dominant subgenre from Agent 6, query MusicBrainz recording search
+- URL: https://musicbrainz.org/ws/2/recording?query=tag:"{subgenre}"&limit=15&fmt=json
+- Headers: User-Agent: "HouseMusicResonanceEngine/1.0 ({USER_AGENT_CONTACT})"
+- Per-call timeout: 2500ms
+- Stagger calls by 1100ms to respect 1 req/sec IP limit
+- Maximum 3 subgenres queried per pipeline run (3 seconds total budget)
+- Parse response and extract: {artist, title, subgenre, source: 'musicbrainz', tags, mbid}
+- Cache responses by query string for 1 hour TTL
+- On 503 error: silently fail, return empty array
+- On timeout: silently fail, return empty array
+- Returns max 30 normalized candidates
+
+2. DISCOGS DISCOVERY (bounded, optional)
+Add function searchDiscogs(subgenres, vibeKeywords) that does the following:
+- Only runs if process.env.DISCOGS_TOKEN is set, else returns empty array immediately
+- For each dominant subgenre, query Discogs database search
+- URL: https://api.discogs.com/database/search?genre=Electronic&style={subgenre}&type=release&per_page=15&token={DISCOGS_TOKEN}
+- Headers: User-Agent: "HouseMusicResonanceEngine/1.0 +{USER_AGENT_CONTACT}"
+- Per-call timeout: 2000ms
+- Maximum 3 subgenre queries per pipeline run
+- Read X-Discogs-Ratelimit-Remaining header — if remaining < 5, abort further Discogs calls
+- Parse response and extract: {artist, title, subgenre, source: 'discogs', label, year, country}
+- Cache responses by query string for 1 hour TTL
+- On 429 error: stop calling Discogs for next 60 seconds (set a flag)
+- On timeout: silently fail, return empty array
+- Returns max 30 normalized candidates
+
+3. NORMALISED CANDIDATE SCHEMA
+All discovery functions must return candidates in this exact shape:
+{
+  artist: string,
+  title: string,
+  subgenre: string,
+  source: 'lastfm_tags' | 'lastfm_similar' | 'musicbrainz' | 'discogs' | 'csv_niche',
+  tags: string[],
+  metadata: {
+    label?: string,
+    year?: number,
+    mbid?: string,
+    listeners?: number,
+    country?: string
+  }
+}
+
+4. PARALLEL DISCOVERY ORCHESTRATION
+Replace the current sequential discovery with parallel execution using Promise.allSettled:
+
+async function runDiscovery(vibeDNA, preferences, freeText, deadline = 8000) {
+  const startTime = Date.now();
+  const results = await Promise.allSettled([
+    withTimeout(getLastfmTagTracks(vibeDNA.dominant_subgenres), 3000),
+    withTimeout(getLastfmSimilarTracks(originalTracks), 3000),
+    withTimeout(searchMusicBrainz(vibeDNA.dominant_subgenres), 3500),
+    withTimeout(searchDiscogs(vibeDNA.dominant_subgenres), 3000),
+    Promise.resolve(getCsvNicheArtists(vibeDNA.dominant_subgenres))
+  ]);
+  
+  const candidates = [];
+  const sourceCounts = { lastfm_tags: 0, lastfm_similar: 0, musicbrainz: 0, discogs: 0, csv_niche: 0 };
+  
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+      candidates.push(...r.value);
+      const sourceName = ['lastfm_tags', 'lastfm_similar', 'musicbrainz', 'discogs', 'csv_niche'][i];
+      sourceCounts[sourceName] = r.value.length;
+    }
+  });
+  
+  // Quorum check
+  if (candidates.length < 15) {
+    console.warn('[discovery] Below MIN_CANDIDATES, broadening tags');
+    // try parent subgenre tags as fallback
+  }
+  
+  console.log(JSON.stringify({
+    step: 'discovery_complete',
+    duration_ms: Date.now() - startTime,
+    source_counts: sourceCounts,
+    total_candidates: candidates.length
+  }));
+  
+  return { candidates, sourceCounts };
+}
+
+5. DEDUPLICATION (CRITICAL)
+After merging all sources, deduplicate by normalized artist+title:
+
+function dedupeCandidates(candidates) {
+  const seen = new Map();
+  candidates.forEach(c => {
+    const key = `${c.artist.toLowerCase().trim()}|${c.title.toLowerCase().trim()}`;
+    if (!seen.has(key)) {
+      seen.set(key, c);
+    } else {
+      // Merge sources — track that this candidate appeared in multiple sources
+      const existing = seen.get(key);
+      if (!existing.also_in) existing.also_in = [];
+      existing.also_in.push(c.source);
+    }
+  });
+  return Array.from(seen.values());
+}
+
+Candidates appearing in multiple sources get a confidence boost in scoring (cross-source validation).
+
+6. UPDATE DETERMINISTIC SCORER
+The scoreCandidatesDeterministic function must now factor in:
+- Multi-source bonus: if candidate.also_in exists, add 5 points per additional source
+- Source diversity caps applied AFTER scoring: max 4 from any single source in final 8
+
+7. SOURCE CONTRIBUTION LOGGING
+Log final recommendation source breakdown:
+
+console.log(JSON.stringify({
+  step: 'final_recommendations',
+  recommendations_by_source: {
+    lastfm_tags: finalRecs.filter(r => r.source === 'lastfm_tags').length,
+    lastfm_similar: finalRecs.filter(r => r.source === 'lastfm_similar').length,
+    musicbrainz: finalRecs.filter(r => r.source === 'musicbrainz').length,
+    discogs: finalRecs.filter(r => r.source === 'discogs').length,
+    csv_niche: finalRecs.filter(r => r.source === 'csv_niche').length
+  },
+  csv_dependency_pct: (csv_count / 8) * 100
+}));
+
+This tells us if the system is over-relying on CSV.
+
+8. UPDATE SSE PROGRESS TIMELINE
+Add new steps to the user-facing timeline:
+- "Searching Last.fm tags..."
+- "Finding similar tracks..."
+- "Searching MusicBrainz..."
+- "Searching Discogs..." (only shown if DISCOGS_TOKEN configured)
+- "Checking niche database..."
+- "Scoring candidates..."
+- "Building your playlist..."
+
+9. GUARDRAILS RECAP
+- MusicBrainz: 2.5s timeout per call, 1.1s stagger, max 3 calls per pipeline
+- Discogs: 2s timeout per call, abort if rate-limit-remaining < 5, max 3 calls per pipeline
+- All sources: graceful failure, never block the pipeline
+- Deterministic scorer remains primary path — Anthropic only enriches "why" text
+- If everything fails, fall back to Last.fm + CSV which is the current working state
+- Cache all external API responses for 1 hour
+- Never reintroduce open web search
+
+10. FREE DISCOGS TOKEN SETUP INSTRUCTIONS
+After implementation, output these instructions for the user:
+"To enable Discogs (optional but recommended):
+1. Go to https://www.discogs.com/settings/developers
+2. Click 'Generate new token'
+3. Copy the token
+4. In Railway dashboard add environment variable: DISCOGS_TOKEN = (paste token)
+5. Restart the Railway service
+If you skip this step, Discogs will be silently disabled and the system continues with Last.fm + MusicBrainz + CSV."
+
+After implementing everything, update CLAUDE.md session log with:
+- New architecture diagram
+- Source contribution targets (CSV should be <30% of final recs)
+- Discogs token setup instructions
+- Logging fields to monitor
+
+Commit and push.

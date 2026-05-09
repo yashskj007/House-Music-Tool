@@ -1,0 +1,61 @@
+Read CLAUDE.md for full project context before making any changes.
+
+FIX 1 — SIMPLIFY SLIDER QUESTIONS
+The current slider questions are too technical and complex. Rewrite all 5 slider questions and their pole labels in plain, conversational English that anyone can understand immediately. Keep the same underlying meaning but make it feel natural and human.
+
+Current → New:
+
+SLIDER 1 - GROOVE ARCHITECTURE
+Current question: "When a house record really works for you, what does the groove feel like?"
+Current poles: "Locked / straight / driving / relentless" → "Swung / syncopated / percussive / breathing"
+New question: "How do you like the beat to feel?"
+New left pole (1): "Steady and machine-like"
+New right pole (7): "Loose and human"
+New description: "Think of the difference between a metronome and a jazz drummer."
+
+SLIDER 2 - PRODUCTION TEXTURE  
+Current question: "What production finish draws you in most?"
+Current poles: "Warm / dusty / analog / raw / organic" → "Clean / bright / polished / surgical / digital"
+New question: "What kind of sound do you prefer?"
+New left pole (1): "Warm and raw"
+New right pole (7): "Clean and polished"
+New description: "Like the difference between vinyl crackle and a studio-perfect recording."
+
+SLIDER 3 - HARMONIC DEPTH
+Current question: "What do you want the music to do to you?"
+Current poles: "Hypnotize through repetition and restraint" → "Move me through chords, melody and emotional lift"
+New question: "What moves you more in a track?"
+New left pole (1): "Hypnotic repetition"
+New right pole (7): "Melody and emotion"
+New description: "Do you get lost in the groove, or do you want to feel something?"
+
+SLIDER 4 - STRUCTURAL PAYOFF
+Current question: "Across a long house track, what do you value most?"
+Current poles: "Unwavering groove — stays in the pocket throughout" → "A journey — builds, breakdowns, tension and release"
+New question: "What do you want from a track's journey?"
+New left pole (1): "Keep the groove going"
+New right pole (7): "Build me up and drop me"
+New description: "Steady all the way through, or big moments and releases?"
+
+SLIDER 5 - DISCOVERY MODE
+Current question: "If two records fit your sonic lane equally, which do you choose?"
+Current poles: "Trusted artist / label / scene I already know" → "Unfamiliar corner of house that stretches me a bit"
+New question: "How adventurous do you want to be?"
+New left pole (1): "Artists I already know"
+New right pole (7): "Surprise me with something new"
+New description: "Stick to familiar names or discover something unexpected?"
+
+FIX 2 — LINK DIRECTLY TO SONGS NOT SEARCH
+Currently YouTube links go to search results. Fix by:
+1. For YouTube: change URL format from `https://www.youtube.com/results?search_query=Artist+Song` to use YouTube's music search which gives better direct results: `https://music.youtube.com/search?q=Artist+Song+Title`
+2. For Spotify: change from search URL to direct search that opens the track: `https://open.spotify.com/search/Artist%20Song%20Title/tracks` — this opens Spotify directly on the tracks tab showing the exact song at the top
+3. Add a third link button for each song: "Last.fm" linking to `https://www.last.fm/music/Artist/_/Song+Title` — this almost always goes directly to the exact song page
+
+FIX 3 — PREVENT FAKE/NON-EXISTENT SONGS
+Claude sometimes recommends songs that don't exist. Fix by adding these instructions to both the CALL 1 and CALL 2 recommendation prompts:
+
+"CRITICAL: Only recommend songs that you are highly confident actually exist as released tracks. Rules: (1) Only recommend a song if you have seen it referenced in your training data as a real released track, (2) Do not invent track names that sound plausible — only use real titles you are certain about, (3) If you are less than 90% confident a specific track exists, recommend a different confirmed track by the same artist instead, (4) For underground or emerging artists where you are unsure of specific track titles, recommend the artist generally with their most well-known confirmed track, (5) After web search, only use track titles that appear in the actual search results."
+
+Also add a disclaimer on each song card in small text: "Verify on streaming platforms before listening."
+
+After all fixes, update CLAUDE.md session log with these changes and commit and push.

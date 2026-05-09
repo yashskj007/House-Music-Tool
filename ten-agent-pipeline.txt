@@ -1,0 +1,79 @@
+Read CLAUDE.md for context. Redesign the entire recommendation pipeline as a 10-agent system in server.js. Each agent is a tiny focused Anthropic API call. Here is the exact implementation:
+
+AGENTS 1-5 — DYNAMIC TRACK ANALYSERS (run in parallel using Promise.all)
+The user can enter 5 to 10 songs. Distribute songs across exactly 5 agents dynamically:
+- If 5 songs: each agent gets exactly 1 song
+- If 6 songs: agents 1 gets 2 songs, agents 2-5 get 1 song each
+- If 7 songs: agents 1-2 get 2 songs each, agents 3-5 get 1 song each
+- If 8 songs: agents 1-3 get 2 songs each, agents 4-5 get 1 song each
+- If 9 songs: agents 1-4 get 2 songs each, agent 5 gets 1 song
+- If 10 songs: each agent gets exactly 2 songs
+
+Distribution logic in server.js:
+const songs = parsedSongs; // array of {artist, title}
+const agentCount = 5;
+const agents = Array.from({length: agentCount}, () => []);
+songs.forEach((song, i) => agents[i % agentCount].push(song));
+// Run all 5 agents in parallel regardless of song count
+
+Each agent system prompt (under 200 tokens):
+"You are a House music expert. Analyse these tracks and return ONLY a JSON array where each element has: bpm_range, subgenre, groove, energy, vocals, instruments (array), production_era, mood, geographic_origin, artist, title"
+User message lists all songs assigned to that agent.
+Max tokens: 400 per song in that agent (so 400 for 1 song, 800 for 2 songs).
+Run all 5 agents in parallel with Promise.all.
+Flatten all results into one array after completion.
+Also update the input UI in index.html to accept 5-10 songs (change label from "5 songs" to "5-10 songs" and update validation).
+
+AGENT 6 — VIBE DNA SYNTHESISER
+Input: JSON array of 5 track analyses from Agents 1-5
+System prompt (under 300 tokens): "You are a music taste profiler. Given analyses of 5 House tracks, synthesise the listener's taste profile. Return ONLY JSON with: vibeName (creative 3-word name), vibeDNA (2 sentence description of their taste), dimensions (array of 10 objects: {name, value, detail} covering: Tempo DNA, Harmonic Palette, Textural Layers, Emotional Arc, Vocal Character, Production Era, Geographic DNA, Scene Position, Listener Profile, Dancefloor Function), dominant_subgenres (array), instrument_profile (array of {instrument, prominence}), clubScene (string)"
+Max tokens: 1500
+
+AGENT 7 — PREFERENCE INTERPRETER (run parallel to Agent 6)
+Input: beat_feel score, sound_texture score, emotion_hypnosis score, track_journey score, discovery_style score (all 1-5), plus free_text string
+System prompt (under 150 tokens): "Convert these House music preference scores (1-5 scale) and free text into a sonic profile. Return ONLY JSON with: groove_want (string), texture_want (string), harmony_want (string), structure_want (string), discovery_want (string), keywords (array of strings from free text), moment_context (string describing listening moment)"
+Max tokens: 400
+
+AGENT 8 — WEB SCOUT (web search enabled)
+Input: dominant subgenres from Agent 6 + preference profile from Agent 7
+System prompt (under 300 tokens): "You are a House music scout. Search for 15 real released tracks matching these subgenres and preferences. Use web search to find current releases from Beatport, Traxsource, and Resident Advisor. Include underground and emerging artists. Only recommend tracks you are highly confident exist as real releases. Return ONLY a JSON array of 15 objects: [{artist, title, subgenre, release_year, why_it_fits, confidence: high/medium}]"
+Tools: web_search enabled
+Max tokens: 2000
+
+AGENT 9 — NICHE CSV MATCHER (NO API CALL - pure server code)
+Server-side JavaScript only. Read the CSV file already parsed on server startup.
+Match the dominant subgenre from Agent 6 to the correct primary_bucket in the CSV.
+Return top 40 artists from that bucket as a simple array of strings.
+Zero tokens used. Zero API calls. Instant.
+
+AGENT 10 — RECOMMENDATION ENGINE
+Input: Agent 6 vibe DNA + Agent 7 preference profile + Agent 8 web candidates (15 tracks) + Agent 9 niche artists (40 names)
+System prompt (under 400 tokens): "You are a music recommendation engine. Score each candidate track against: 40% match to vibe DNA dimensions, 30% match to preference profile, 30% match to free text keywords (if no free text: 57% vibe DNA, 43% preferences). Select exactly 8 highest scoring tracks. For niche artists provided, check if any fit better than web candidates and substitute if so. Return ONLY a JSON array of exactly 8 objects: [{title, artist, subgenre, scene (one line), instruments (array), why (2 sentences mentioning specific dimensions matched), youtube_url (https://music.youtube.com/search?q=Artist+Title), spotify_url (https://open.spotify.com/search/Artist%20Title/tracks), lastfm_url (https://www.last.fm/music/Artist/_/Title), weightMatch (string explaining which weights drove this pick)}]"
+Max tokens: 2500
+
+ORCHESTRATION - Create these routes in server.js:
+
+POST /api/analyse:
+1. Run Agents 1-5 in parallel (Promise.all)
+2. Run Agent 6 with results
+3. Return Agent 6 result to browser immediately
+Total: ~6 small API calls, each under 5000 tokens
+
+POST /api/recommend:
+1. Run Agent 7 (preference interpretation)
+2. Run Agent 8 (web scout) in parallel with Agent 7
+3. Run Agent 9 (CSV matcher, no API call) in parallel
+4. Run Agent 10 with all results
+5. Return Agent 10 result to browser
+Total: ~3 API calls, each under 5000 tokens
+
+UPDATE index.html:
+- analyseVibe calls POST /api/analyse and renders the vibe DNA + 10 dimensions
+- findSongs calls POST /api/recommend passing the stored vibe analysis + question scores + free text
+- Show multi-step loading: "Decoding Track 1..." → "Decoding Track 2..." → "Synthesising your DNA..." → "Scouting artists..." → "Building your playlist..."
+- Each recommendation card shows: title, artist, subgenre badge, scene line, instruments, why text, weightMatch, 3 link buttons (YouTube Music / Spotify / Last.fm)
+- Remove "Verify on streaming platforms" disclaimer - replace with subgenre badge
+
+IMPORTANT: Every agent returns ONLY valid JSON - no markdown, no explanation, no preamble. Add this to every system prompt: "Return ONLY the JSON object/array. No markdown. No explanation. Start your response with { or ["
+
+Commit and push when done. Update CLAUDE.md session log.

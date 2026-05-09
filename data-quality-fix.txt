@@ -1,0 +1,212 @@
+Read CLAUDE.md for context. Implement root-cause fixes for JSON parsing instability and artist-vs-track data quality. Do not break any existing functionality. Add validation layers without removing anything that currently works.
+
+PART 1 — HARDEN AGENT 6 (VIBE SYNTHESISER) JSON OUTPUT
+
+Step 1.1 — Stricter JSON-only system prompt with literal example
+In server.js update the Agent 6 system prompt. Add this at the END of the existing prompt:
+
+"Output format requirements (strict):
+- Return ONLY a single JSON object. No prose. No markdown fences. No explanation.
+- Start your response with { and end with }
+- All string values must use double quotes
+- No trailing commas
+- All field names must match the schema exactly
+
+Example of valid output:
+{\"vibeName\":\"Sunset Boulevard Cruiser\",\"vibeDNA\":\"Two sentences here.\",\"dimensions\":[{\"name\":\"Tempo DNA\",\"value\":\"122 BPM\",\"detail\":\"Steady mid-tempo groove\"}],\"dominant_subgenres\":[\"Deep House\",\"Afro House\"],\"instrument_profile\":[{\"instrument\":\"Rhodes\",\"prominence\":\"high\"}],\"clubScene\":\"Late-night rooftop sessions\"}"
+
+Step 1.2 — Add a JSON repair function
+Add this helper function in server.js BEFORE parseAgentJSON:
+
+function repairJSON(text) {
+  let s = text.trim();
+  // Remove markdown fences
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '');
+  // Find outermost JSON object/array
+  const firstBrace = Math.min(
+    s.indexOf('{') === -1 ? Infinity : s.indexOf('{'),
+    s.indexOf('[') === -1 ? Infinity : s.indexOf('[')
+  );
+  if (firstBrace !== Infinity) s = s.substring(firstBrace);
+  const lastBrace = Math.max(s.lastIndexOf('}'), s.lastIndexOf(']'));
+  if (lastBrace !== -1) s = s.substring(0, lastBrace + 1);
+  // Fix trailing commas before } or ]
+  s = s.replace(/,(\s*[}\]])/g, '$1');
+  // Fix smart quotes
+  s = s.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
+  return s;
+}
+
+Step 1.3 — Add schema validator
+Add this function in server.js:
+
+function validateVibeSchema(obj) {
+  const required = ['vibeName', 'vibeDNA', 'dimensions', 'dominant_subgenres', 'instrument_profile', 'clubScene'];
+  const missing = required.filter(k => !obj[k]);
+  if (missing.length) return { valid: false, error: `Missing fields: ${missing.join(', ')}` };
+  if (!Array.isArray(obj.dimensions) || obj.dimensions.length < 5) return { valid: false, error: 'dimensions must be array of 5+' };
+  if (!Array.isArray(obj.dominant_subgenres) || !obj.dominant_subgenres.length) return { valid: false, error: 'dominant_subgenres empty' };
+  return { valid: true };
+}
+
+Step 1.4 — Replace Agent 6 call wrapper
+The Agent 6 call should now follow this exact sequence:
+1. Make the API call
+2. Try parseAgentJSON on the raw response
+3. If parse fails, run repairJSON then try parsing again
+4. If parse succeeds, run validateVibeSchema
+5. If schema invalid, retry the entire API call ONCE with delay 1500ms
+6. If retry also fails schema validation, throw clear error with the actual schema problem logged
+
+Log every step: parse attempt, repair attempt, schema check result, retry trigger.
+
+PART 2 — CANDIDATE TYPE VALIDATION (CRITICAL)
+
+Step 2.1 — Add isValidTrackCandidate function
+Add this in server.js:
+
+function isValidTrackCandidate(c) {
+  if (!c || typeof c !== 'object') return false;
+  if (!c.artist || typeof c.artist !== 'string' || !c.artist.trim()) return false;
+  if (!c.title || typeof c.title !== 'string' || !c.title.trim()) return false;
+  // Reject if title is identical to artist (placeholder issue)
+  if (c.title.trim().toLowerCase() === c.artist.trim().toLowerCase()) return false;
+  // Reject obvious placeholders
+  const placeholders = ['unknown', 'untitled', 'n/a', 'null', 'undefined', 'tba', 'various'];
+  if (placeholders.includes(c.title.trim().toLowerCase())) return false;
+  // Reject if title is just whitespace or single character
+  if (c.title.trim().length < 2) return false;
+  return true;
+}
+
+Step 2.2 — Separate candidate pools at ingestion
+After each discovery function returns, sort results into two pools:
+
+function sortCandidates(rawCandidates) {
+  const trackCandidates = [];
+  const artistHints = [];
+  rawCandidates.forEach(c => {
+    if (isValidTrackCandidate(c)) {
+      trackCandidates.push(c);
+    } else if (c.artist && typeof c.artist === 'string' && c.artist.trim()) {
+      artistHints.push({ artist: c.artist.trim(), source: c.source, subgenre: c.subgenre });
+    }
+    // else: silently drop garbage
+  });
+  return { trackCandidates, artistHints };
+}
+
+Step 2.3 — Update CSV niche matcher
+The CSV currently returns artist-only entries. Update getCsvNicheArtists to explicitly return artist hints, not track candidates:
+
+function getCsvNicheArtists(subgenres) {
+  // existing logic to find matching artists
+  return matchedArtists.map(a => ({
+    artist: a.artist_name,
+    subgenre: a.primary_bucket,
+    source: 'csv_niche',
+    type: 'artist_hint'  // explicit type marker
+  }));
+}
+
+Step 2.4 — Enrich artist hints into track candidates via Last.fm
+Add this function:
+
+async function enrichArtistHints(artistHints, deadline = 4000) {
+  const startTime = Date.now();
+  const enriched = [];
+  
+  for (const hint of artistHints.slice(0, 12)) { // cap at 12 enrichments
+    if (Date.now() - startTime > deadline) break; // budget exhausted
+    
+    try {
+      // Use Last.fm artist.getTopTracks to find their best known track
+      const url = `https://ws.audioscrobbler.com/2.0/?method=artist.getTopTracks&artist=${encodeURIComponent(hint.artist)}&limit=2&api_key=${process.env.LASTFM_API_KEY}&format=json`;
+      const res = await Promise.race([
+        fetch(url).then(r => r.json()),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 1500))
+      ]);
+      
+      const tracks = res?.toptracks?.track || [];
+      if (tracks.length > 0) {
+        enriched.push({
+          artist: hint.artist,
+          title: tracks[0].name,
+          subgenre: hint.subgenre,
+          source: hint.source,
+          tags: [],
+          metadata: { listeners: parseInt(tracks[0].listeners) || 0 }
+        });
+      }
+      // If no tracks found, the artist hint is silently dropped
+    } catch (err) {
+      // Timeout or error: drop the hint, continue with others
+    }
+  }
+  
+  console.log(JSON.stringify({
+    step: 'artist_enrichment',
+    hints_received: artistHints.length,
+    successfully_enriched: enriched.length,
+    duration_ms: Date.now() - startTime
+  }));
+  
+  return enriched;
+}
+
+Step 2.5 — Update discovery orchestrator
+In runDiscovery (or wherever the parallel discovery happens), update the flow:
+
+1. Run all discovery sources in parallel as today
+2. Combine all raw candidates from all sources
+3. Run sortCandidates(rawCandidates) to split into trackCandidates and artistHints
+4. Run enrichArtistHints(artistHints) with 4 second budget — returns valid track candidates
+5. Combine: finalCandidates = [...trackCandidates, ...enrichedFromHints]
+6. Deduplicate as before
+7. ONLY finalCandidates enters the deterministic scorer
+
+PART 3 — FINAL OUTPUT VALIDATOR
+
+Step 3.1 — Validate final recommendations before sending to browser
+Before returning recommendations from /api/recommend, run final validation:
+
+function validateFinalRecommendations(recs) {
+  if (!Array.isArray(recs)) return [];
+  return recs.filter(r => {
+    if (!isValidTrackCandidate(r)) return false;
+    if (!r.youtube_url || !r.spotify_url || !r.lastfm_url) return false;
+    if (!r.why || r.why.length < 20) return false;
+    return true;
+  });
+}
+
+If after filtering there are fewer than 6 recommendations, log a warning but return what we have (degraded mode).
+
+PART 4 — OBSERVABILITY
+
+Add structured logs at every stage:
+- Discovery completion: source counts, raw vs valid track count, artist hint count
+- Artist enrichment: hints in, tracks out, duration
+- Scoring: candidates in, top 8 out
+- Final validation: pre-filter count, post-filter count, dropped count
+
+This lets us see exactly where data quality issues occur.
+
+PART 5 — DO NOT BREAK ANYTHING
+
+Critical rules during implementation:
+1. Keep all existing resilience: keepalive pings, hard timeouts, graceful failure, deterministic scorer fallback
+2. Keep the existing Agent 6 retry logic but add the schema validation INSIDE the retry condition
+3. The CSV must still contribute to recommendations — just via artist enrichment now, not as direct track candidates
+4. If artist enrichment times out, the pipeline still works with whatever track candidates exist
+5. If Last.fm artist.getTopTracks fails, that specific hint is dropped silently — pipeline continues
+6. The final user-facing output format does not change — same JSON shape, same fields
+
+Test the pipeline mentally with these scenarios before committing:
+- All sources work normally → should produce 8 valid recommendations
+- CSV returns 30 artist hints, Last.fm enrichment succeeds for 10 → should still produce 8 valid recommendations including some niche artists
+- CSV returns 30 artist hints, Last.fm enrichment fails completely → should produce 8 from Last.fm tags + similar only
+- Agent 6 returns malformed JSON once → repair function fixes it on first attempt
+- Agent 6 returns invalid schema twice → throws error with clear message about which field was missing
+
+After implementation, update CLAUDE.md session log with the new validation layers. Commit and push.

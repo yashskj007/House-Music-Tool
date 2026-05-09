@@ -1,0 +1,105 @@
+Read CLAUDE.md for full project context before making any changes.
+
+UPGRADE — REPLACE 5 SLIDERS WITH 5 LABELED OPTION QUESTIONS
+
+Remove the current slider-based preference questions entirely. Replace with 5 questions that each have 5 labeled clickable options (like a radio button row). Style them as elegant single-select option cards matching the dark premium UI (#0A0A0F background, thin 1px border, gold #C9A84C when selected, white text).
+
+Each question shows:
+- A section label in uppercase gold tracking
+- A one-line description in small muted text
+- The question in italic white
+- 5 options as clickable cards in a row (on mobile: stacked). When selected: gold border + subtle gold background tint. Unselected: dark border.
+
+Here are the 5 questions exactly as specified:
+
+---
+
+QUESTION 1 — BEAT FEEL
+Section label: "BEAT FEEL"
+One-line description: "This tells us whether you like house music that feels clean and driving, or more bouncy and percussion-led."
+Question: "When you hear a house track, what kind of beat usually pulls you in more?"
+Options (value 1-5):
+1 = "A clean, steady beat that drives forward"
+2 = "Mostly steady, with a little bounce"
+3 = "A balance of steady and bouncy"
+4 = "More bounce, swing, and percussion"
+5 = "Very percussive, groovy, and body-moving"
+Model signal: groove_complexity, percussion_preference, afro/tribal vs tech/minimal leaning
+
+---
+
+QUESTION 2 — SOUND TEXTURE
+Section label: "SOUND TEXTURE"
+One-line description: "This tells us whether you prefer warm, organic sounds or clean, polished production."
+Question: "What kind of sound do you usually prefer in house music?"
+Options (value 1-5):
+1 = "Warm, raw, earthy, and organic"
+2 = "Mostly warm, but still clean"
+3 = "Balanced between organic and polished"
+4 = "Mostly clean, bright, and modern"
+5 = "Very polished, crisp, shiny, and produced"
+Model signal: timbre_brightness_preference, analog/earthy vs polished/festival
+
+---
+
+QUESTION 3 — EMOTION VS HYPNOSIS
+Section label: "EMOTION VS HYPNOSIS"
+One-line description: "This tells us whether you want the track to create a hypnotic groove or an emotional melodic feeling."
+Question: "What do you want a house track to do for you more often?"
+Options (value 1-5):
+1 = "Keep me locked into a deep, hypnotic groove"
+2 = "Mostly hypnotic, with some emotion"
+3 = "A balance of groove and emotion"
+4 = "Mostly emotional, melodic, and expressive"
+5 = "Give me strong melodies, chords, and emotional lift"
+Model signal: harmonic_density_preference, minimal/hypnotic vs melodic/expressive leaning
+
+---
+
+QUESTION 4 — TRACK JOURNEY
+Section label: "TRACK JOURNEY"
+One-line description: "This tells us whether you like a track that stays steady or one that builds into bigger moments."
+Question: "In a house track, what kind of structure do you enjoy more?"
+Options (value 1-5):
+1 = "A steady groove that stays consistent throughout"
+2 = "Mostly steady, with small changes"
+3 = "A mix of steady groove and build-ups"
+4 = "Clear build-ups, breakdowns, and releases"
+5 = "A full journey with big tension and payoff moments"
+Model signal: section_contrast_preference, loop-friendly vs journey tracks
+
+---
+
+QUESTION 5 — DISCOVERY STYLE
+Section label: "DISCOVERY STYLE"
+One-line description: "This tells us whether you prefer trusted artists and scenes or are open to new, unfamiliar sounds."
+Question: "When discovering new house music, what makes you more likely to try a track?"
+Options (value 1-5):
+1 = "I trust artists, labels, or scenes I already know"
+2 = "I prefer familiar names, but I'll explore a little"
+3 = "Both familiar names and new discoveries matter"
+4 = "I care more about the sound than the name"
+5 = "I love finding unknown artists if the vibe is right"
+Model signal: novelty_tolerance, artist-weight vs sound-weight preference
+
+---
+
+INTERACTION RULES:
+- User must select one option per question before "Find My Resonance" button appears
+- Show a progress indicator: "X of 5 selected" that updates as user selects
+- Selected state: gold #C9A84C border, rgba(201,168,76,0.08) background tint
+- Unselected hover: rgba(255,255,255,0.04) background
+- Once all 5 selected, "Find My Resonance" button slides in smoothly
+
+PASSING VALUES TO RECOMMENDATION:
+Normalise each 1-5 value to [-1, +1] using formula: (value - 3) / 2
+Pass to recommendation prompt with these labels and their meaning:
+- beat_feel: -1 = driving/mechanical, +1 = percussive/organic/swung
+- sound_texture: -1 = warm/analog/raw, +1 = polished/digital/bright
+- emotion_hypnosis: -1 = hypnotic/minimal/repetitive, +1 = melodic/emotional/expressive
+- track_journey: -1 = steady groove throughout, +1 = build/breakdown/release arc
+- discovery_style: -1 = trusted artists/scenes, +1 = sound-led/unknown artists fine
+
+The recommendation prompt must use these 5 normalised values as Weight B (30% with free text, 43% without) when scoring candidate songs.
+
+After all changes, update CLAUDE.md session log with this upgrade and commit and push.
